@@ -1,0 +1,15 @@
+name: proj2-337
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - setuptools
+  - wheel
+  - pip:
+    - numpy
+    - pandas
+    - requests
+    - flask
+    - flask-cors
+    - beautifulsoup4
