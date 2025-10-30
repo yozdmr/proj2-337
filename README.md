@@ -15,3 +15,5 @@ conda activate proj2-337
 ## ...
 
 Find each part of the project under its respective folder.
+
+Currently we are working on Part 1.
