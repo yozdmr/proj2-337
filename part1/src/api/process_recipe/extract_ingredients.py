@@ -1,5 +1,6 @@
 from typing import Optional
 from bs4 import BeautifulSoup, Tag
+import re as _re
 
 
 # Checks whether contains ingredients text in the tag or a span
@@ -19,8 +20,156 @@ def _clean_space(text: str) -> str:
     return " ".join((text or "").replace("\u2009", " ").replace("\xa0", " ").split())
 
 
+# Converts Unicode fraction characters to their text equivalents.
+# Examples: ⅓ -> "1/3", ¼ -> "1/4", ½ -> "1/2", etc.
+def _convert_unicode_fractions(text: Optional[str]) -> Optional[str]:
+    if not text:
+        return text
+    
+    # Mapping of Unicode fraction characters to their text equivalents
+    unicode_fractions = {'\u00BC': '1/4', '\u00BD': '1/2', '\u00BE': '3/4', '\u2153': '1/3', '\u2154': '2/3', '\u2155': '1/5', '\u2156': '2/5', '\u2157': '3/5', '\u2158': '4/5', '\u2159': '1/6', '\u215A': '5/6', '\u215B': '1/8', '\u215C': '3/8', '\u215D': '5/8', '\u215E': '7/8'}
+    
+    result = text
+    for unicode_char, text_equivalent in unicode_fractions.items():
+        result = result.replace(unicode_char, text_equivalent)
+    
+    return result
+
+# Extracts descriptor and preparation from ingredient name if present.
+def _extract_descriptor_and_preparation_from_name(name: Optional[str]) -> tuple[Optional[str], Optional[str], Optional[str]]:
+    if not name:
+        return name, None, None
+    
+    name_lower = name.lower()
+    
+    # Common descriptor words (adjectives/qualifiers that describe the ingredient)
+    descriptor_words = {
+        'boneless', 'skinless', 'bone-in', 'skin-on',
+        'ground', 'whole', 'fresh', 'dried', 'frozen', 'raw', 'cooked', 
+        'roasted', 'toasted', 'organic', 'pure', 'extra', 'fine', 'coarse',
+        'large', 'small', 'medium', 'whole',
+        'golden', 'red', 'white', 'yellow', 'green', 'black', 'brown', 'pink', 'purple', 'orange',
+        'all-purpose', 'whole-wheat', 'extra-virgin',
+    }
+    
+    # Multi-word descriptor phrases
+    multi_word_descriptors = {
+        'all purpose', 'whole wheat', 'baking soda', 'baking powder', 'extra virgin',
+        'golden delicious', 'red delicious', 'granny smith'
+    }
+    
+    # Preparation verb patterns (action verbs that indicate preparation)
+    preparation_patterns = [
+        r'\bcut\s+into\s+[^,]*',  # "cut into 1-inch cubes"
+        r'\bchopped\s+(?:into|in)\s+[^,]*',  # "chopped into pieces"
+        r'\bdiced\s+(?:into|in)\s+[^,]*',  # "diced into cubes"
+        r'\bsliced\s+(?:into|in|thin|thick)\s+[^,]*',  # "sliced thin"
+        r'\bminced\s+[^,]*',  # "minced garlic"
+        r'\bgrated\s+[^,]*',  # "grated cheese"
+        r'\bshredded\s+[^,]*',  # "shredded"
+        r'\bcubed\s+[^,]*',  # "cubed"
+        r'\bjulienned\s+[^,]*',  # "julienned"
+        r'\bquartered\s+[^,]*',  # "quartered"
+        r'\bhalved\s+[^,]*',  # "halved"
+        r'\bpeeled\s+[^,]*',  # "peeled"
+        r'\bseeded\s+[^,]*',  # "seeded"
+        r'\btrimmed\s+[^,]*',  # "trimmed"
+    ]
+    
+    # First, extract preparation instructions
+    preparation = None
+    remaining_name = name
+    for pattern in preparation_patterns:
+        match = _re.search(pattern, name_lower, _re.IGNORECASE)
+        if match:
+            # Extract with original case
+            start, end = match.span()
+            prep_text = name[start:end].strip()
+            # Remove from name
+            remaining_name = (name[:start] + name[end:]).strip()
+            remaining_name = _re.sub(r'\s*,\s*,', ',', remaining_name)  # Clean up double commas
+            remaining_name = remaining_name.rstrip(',').strip()
+            preparation = prep_text
+            break
+    
+    # If no pattern match, check for comma-separated preparation at the end
+    if preparation is None:
+        parts = [p.strip() for p in remaining_name.split(',') if p.strip()]
+        if len(parts) > 1:
+            # Check if last part(s) contain preparation verbs
+            last_part = parts[-1].lower()
+            prep_indicators = ['cut', 'chopped', 'diced', 'sliced', 'minced', 'grated', 
+                             'shredded', 'cubed', 'quartered', 'halved', 'peeled', 
+                             'trimmed', 'into', 'in']
+            if any(ind in last_part for ind in prep_indicators):
+                preparation = parts[-1]
+                parts = parts[:-1]
+                remaining_name = ', '.join(parts)
+    
+    # Now extract descriptors from the remaining name
+    # Process word by word, handling commas
+    descriptor_parts = []
+    words = remaining_name.split()
+    remaining_words = []
+    i = 0
+    
+    # Extract descriptors from the beginning
+    while i < len(words):
+        found_descriptor = False
+        
+        # Check for multi-word descriptors first (2 words)
+        if i + 1 < len(words):
+            two_word_lower = ' '.join([words[i].lower(), words[i+1].lower()])
+            if two_word_lower in multi_word_descriptors:
+                # Remove trailing comma from second word if present
+                word1 = words[i]
+                word2 = words[i+1].rstrip(',')
+                descriptor_parts.append(' '.join([word1, word2]))
+                i += 2
+                found_descriptor = True
+                
+                # If word2 had a comma, we've moved past a comma boundary
+                # Continue checking for more descriptors after comma
+                if words[i-1].endswith(','):
+                    continue
+        
+        # Check single-word descriptors
+        if not found_descriptor and i < len(words):
+            word_lower = words[i].lower().rstrip(',')
+            if word_lower in descriptor_words:
+                descriptor_parts.append(words[i].rstrip(','))
+                i += 1
+                found_descriptor = True
+            else:
+                # First non-descriptor found, rest is the name
+                break
+        
+        if not found_descriptor:
+            break
+    
+    # Remaining words form the name
+    remaining_words = words[i:]
+    
+    # Join descriptor parts (preserve comma separations if they were there)
+    descriptor = ', '.join(descriptor_parts) if descriptor_parts else None
+    
+    # Join remaining words as the name
+    cleaned_name = ' '.join(remaining_words).strip()
+    cleaned_name = _re.sub(r'\s*,\s*$', '', cleaned_name)  # Remove trailing comma
+    cleaned_name = _clean_space(cleaned_name) if cleaned_name else None
+    
+    # Clean up descriptor
+    if descriptor:
+        descriptor = descriptor.strip().rstrip(',')
+    
+    # Clean up preparation
+    if preparation:
+        preparation = preparation.strip().rstrip(',')
+    
+    return cleaned_name or None, descriptor or None, preparation or None
+
+
 def _parse_li_structured(li: Tag) -> dict:
-    """Parse an <li> that contains structured spans with data-ingredient-* attributes."""
     p = li.find("p")
     target = p if isinstance(p, Tag) else li
 
@@ -36,6 +185,12 @@ def _parse_li_structured(li: Tag) -> dict:
     measurement = " ".join(all_texts("data-ingredient-unit")) or None
     name = first_text("data-ingredient-name")
 
+    # Convert Unicode fractions in quantity to text format
+    quantity = _convert_unicode_fractions(quantity)
+
+    # Extract descriptor and preparation from name if present
+    cleaned_name, extracted_descriptor, extracted_preparation = _extract_descriptor_and_preparation_from_name(name)
+
     # Collect any remaining text around spans as preparation/descriptor details
     extra_parts: list[str] = []
     for child in target.children:
@@ -48,55 +203,23 @@ def _parse_li_structured(li: Tag) -> dict:
             extra_parts.append(extra)
     extra_text = _clean_space(" ".join(extra_parts)).lstrip(",;: ")
 
-    descriptor = None
-    preparation = extra_text or None
+    # Merge preparation from name extraction and extra text
+    descriptor = extracted_descriptor
+    preparation_parts = []
+    if extracted_preparation:
+        preparation_parts.append(extracted_preparation)
+    if extra_text:
+        preparation_parts.append(extra_text)
+    preparation = ", ".join(preparation_parts) if preparation_parts else None
 
     return {
-        "name": name,
+        "name": cleaned_name,
         "quantity": quantity,
         "measurement": measurement,
         "descriptor": descriptor,
-        "preparation": preparation,
+        "preparation": preparation if preparation is not None and preparation[:3] != "( )" else None,
     }
 
-
-def _parse_text_fallback(text: str) -> dict:
-    """Heuristic parsing for plain text ingredients."""
-    import re as _re
-
-    t = _clean_space(text)
-
-    # Match quantity (supports mixed numbers and unicode fractions)
-    frac = "[0-9]+\s+[0-9]/[0-9]|[0-9]/[0-9]|[0-9]+(?:\.[0-9]+)?|[¼½¾⅓⅔⅛⅜⅝⅞]"
-    m_qty = _re.match(rf"^({frac})\b", t)
-    quantity = m_qty.group(1) if m_qty else None
-    rest = t[m_qty.end():].strip() if m_qty else t
-
-    units = (
-        "teaspoon|tsp|tablespoon|tbsp|cup|cups|ounce|ounces|oz|pound|pounds|lb|lbs|gram|grams|g|kilogram|kilograms|kg|pinch|dash|teaspoons|tablespoons|clove|cloves|slice|slices|package|packages|can|cans|quart|quarts|pint|pints|ml|l|litre|litres"
-    )
-    m_unit = _re.match(rf"^((?:{units}))\b", rest, _re.IGNORECASE)
-    measurement = m_unit.group(1) if m_unit else None
-    rest2 = rest[m_unit.end():].strip() if m_unit else rest
-
-    # Parenthetical details treated as preparation
-    m_paren = _re.search(r"\(([^\)]*)\)", rest2)
-    preparation = m_paren.group(1).strip() if m_paren else None
-    rest3 = _re.sub(r"\([^\)]*\)", "", rest2).strip()
-
-    # Split by comma into name + preparation/descriptors
-    parts = [p.strip() for p in rest3.split(",") if p.strip()]
-    name = parts[0] if parts else rest3
-    trailing = ", ".join(parts[1:]) if len(parts) > 1 else None
-    preparation = preparation or trailing or None
-
-    return {
-        "name": name or None,
-        "quantity": quantity,
-        "measurement": measurement,
-        "descriptor": None,
-        "preparation": preparation,
-    }
 
 
 def extract_ingredients(recipe: str) -> list[dict]:
@@ -121,6 +244,8 @@ def extract_ingredients(recipe: str) -> list[dict]:
             return True
         if "mm-recipes-structured-ingredients__list" in cls:
             return True
+        if "o-Ingredients__a-Ingredient" in cls:
+            return True
         # Fallback: generic list immediately under ingredients section
         return True
 
@@ -133,9 +258,7 @@ def extract_ingredients(recipe: str) -> list[dict]:
             spans = target.find_all("span")
             if any(s.has_attr("data-ingredient-name") or s.has_attr("data-ingredient-quantity") or s.has_attr("data-ingredient-unit") for s in spans):
                 item = _parse_li_structured(li)
-            else:
-                text = _clean_space(target.get_text(" ", strip=True))
-                item = _parse_text_fallback(text)
+            
             if any(item.get(k) for k in ("name", "quantity", "measurement", "descriptor", "preparation")):
                 results.append(item)
         return results
@@ -146,7 +269,7 @@ def extract_ingredients(recipe: str) -> list[dict]:
         node = node.find_next()
         if node is None:
             break
-        if isinstance(node, Tag) and node.name in ("h2", "h3"):
+        if isinstance(node, Tag) and node.name in ("h1", "h2", "h3", "h4"):
             # Stop at the next main section header
             break
         if isinstance(node, Tag) and _is_ingredients_list(node):
