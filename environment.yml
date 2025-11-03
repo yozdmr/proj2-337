@@ -13,3 +13,4 @@ dependencies:
     - flask
     - flask-cors
     - beautifulsoup4
+    - spacy

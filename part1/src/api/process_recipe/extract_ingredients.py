@@ -128,7 +128,7 @@ def _extract_descriptor_and_preparation_from_name(name: Optional[str]) -> tuple[
                 i += 2
                 found_descriptor = True
                 
-                # If word2 had a comma, we've moved past a comma boundary
+                # If word2 had a comma, moved past a comma boundary
                 # Continue checking for more descriptors after comma
                 if words[i-1].endswith(','):
                     continue
@@ -260,6 +260,12 @@ def extract_ingredients(recipe: str) -> list[dict]:
                 item = _parse_li_structured(li)
             
             if any(item.get(k) for k in ("name", "quantity", "measurement", "descriptor", "preparation")):
+                if item.get("name") is None:
+                    if item.get("descriptor") is not None:
+                        item["name"], item["descriptor"] = item["descriptor"], item["name"]
+                    else:
+                        continue
+                
                 results.append(item)
         return results
 

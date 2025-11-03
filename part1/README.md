@@ -16,6 +16,8 @@ curl -X POST http://localhost:8080/get-recipe \
   -d '{"url":"https://www.allrecipes.com/copycat-cracker-barrel-fried-apples-recipe-11808171"}'
 ```
 
+Another link: https://www.allrecipes.com/recipe/16049/granny-kats-pumpkin-roll/
+
 View the extracted ingredients by visiting `http://127.0.0.1:8080/get-ingredients`
 
 
