@@ -80,9 +80,6 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
             "methods": extract_methods(description),  # TODO implement this function
             "time": {
                 "duration": "TEMP_VAL",  # TODO str or dict of sub-times
-            },
-            "context": {
-                "references": []  # TODO [related step numbers or preconditions]
             }
         }
 
@@ -91,9 +88,6 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
                 "oven": "TEMP_VAL",  # str (optional)
                 "<ingredient>": "TEMP_VAL"  # str (optional)
             }
-        
-        if False:  # TODO implement optional warnings extraction
-            step["context"]["warnings"] = []  # [list of warnings or advice] (optional)
 
 
         steps.append(step)

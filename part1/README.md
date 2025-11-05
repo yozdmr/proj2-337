@@ -13,7 +13,7 @@ Run a sample call to the ingredient retreival using the command below:
 ```
 curl -X POST http://localhost:8080/get-recipe \
   -H "Content-Type: application/json" \
-  -d '{"url":"https://www.allrecipes.com/copycat-cracker-barrel-fried-apples-recipe-11808171"}'
+  -d '{"url":"https://www.allrecipes.com/recipe/219491/to-die-for-chicken-pot-pie/"}'
 ```
 
 Another link: https://www.allrecipes.com/recipe/16049/granny-kats-pumpkin-roll/
