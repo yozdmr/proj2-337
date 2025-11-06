@@ -12,6 +12,9 @@ UPDATE STEP INFORMATION AS NECESSARY
 '''
 
 
+# TODO Implement this function
+def classify_question(question: str) -> str:
+    return "none"
 
 
 
@@ -21,12 +24,12 @@ def handle_question(question: str) -> str:
     question_type = classify_question(question)
 
     if question_type == "step_information":
-        pass
+        return "Sample response for step information..."
     elif question_type == "ingredient_information":
         pass
     elif question_type == "tool_information":
         pass
     # etc...
 
-    # TODO Change this
-    return "I don't know..."
+    else:
+        return "I'm sorry, I don't know the answer to that question."

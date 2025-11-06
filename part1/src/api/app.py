@@ -1,3 +1,4 @@
+from multiprocessing.connection import answer_challenge
 import re
 import requests
 from bs4 import BeautifulSoup
@@ -7,6 +8,7 @@ from flask_cors import CORS
 
 from process_recipe.extract_ingredients import extract_ingredients
 from process_recipe.extract_steps import extract_steps
+from chat.handle_question import handle_question
 
 app = Flask(__name__)
 CORS(app)
@@ -112,7 +114,12 @@ def ask_question():
 
     data = request.get_json(silent=True) or {}
     question = data.get("question")
-    return jsonify({"answer": question}), 200  # Just return the question back for now
+
+
+    # TODO: Implement this function
+    answer = handle_question(question)
+    
+    return jsonify({"answer": answer}), 200
 
 
 if __name__ == "__main__":
