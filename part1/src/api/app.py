@@ -3,11 +3,13 @@ import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urlparse
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 
 from process_recipe.extract_ingredients import extract_ingredients
 from process_recipe.extract_steps import extract_steps
 
 app = Flask(__name__)
+CORS(app)
 
 curr_recipe = None
 curr_rec = None
@@ -60,6 +62,17 @@ def get_recipe():
     curr_recipe = url
     curr_rec = str(soup)
 
+    # Try to get the name of the page (recipe)
+    curr_recipe_name = None
+    if soup.title:
+        curr_recipe_name = soup.title.get_text(strip=True)
+    # Try other selectors if title is absent or looks generic
+    if not curr_recipe_name or curr_recipe_name.lower() in ['untitled', 'recipe', 'foodnetwork.com']:
+        # Try h1 or class/id commonly used for recipe titles
+        h1 = soup.find('h1')
+        if h1 and h1.get_text(strip=True):
+            curr_recipe_name = h1.get_text(strip=True)
+
     # Process the recipe and extract necessary information
     ingredients = extract_ingredients(curr_rec)
     curr_ingredients = ingredients
@@ -67,8 +80,12 @@ def get_recipe():
     steps = extract_steps(curr_rec, ingredients)
     curr_steps = steps
 
-
-    return jsonify({"status": "saved", "curr_recipe": curr_recipe, "num_steps": len(steps)}), 200
+    return jsonify({
+        "status": "saved",
+        "curr_recipe": curr_recipe,
+        "curr_recipe_name": curr_recipe_name,
+        "num_steps": len(steps)
+    }), 200
 
 @app.get("/get-ingredients")
 def get_ingredients():
@@ -85,6 +102,17 @@ def get_steps():
     if curr_steps is None:
         return jsonify({"error": "No steps saved"}), 404
     return jsonify({"steps": curr_steps}), 200
+
+
+@app.post("/ask-question")
+def ask_question():
+    global curr_steps
+    global curr_ingredients
+    global curr_recipe
+
+    data = request.get_json(silent=True) or {}
+    question = data.get("question")
+    return jsonify({"answer": "I don't know..."}), 200
 
 
 if __name__ == "__main__":
