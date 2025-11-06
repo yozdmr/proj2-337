@@ -1,6 +1,8 @@
 # Part 1
 
-Rules based recipe parser + conversational interface
+Rules based recipe parser + conversational interface.
+
+Run front-end and back-end simultaneously on ports 3000 and 8080 respectively, per the instructions below. Then use the front-end to query the API and talk with the chatbot.
 
 ## Front-end Web App
 
