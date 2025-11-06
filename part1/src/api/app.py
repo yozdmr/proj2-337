@@ -112,7 +112,7 @@ def ask_question():
 
     data = request.get_json(silent=True) or {}
     question = data.get("question")
-    return jsonify({"answer": "I don't know..."}), 200
+    return jsonify({"answer": question}), 200  # Just return the question back for now
 
 
 if __name__ == "__main__":
