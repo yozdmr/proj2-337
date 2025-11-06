@@ -8,15 +8,13 @@ from flask_cors import CORS
 
 from process_recipe.extract_ingredients import extract_ingredients
 from process_recipe.extract_steps import extract_steps
+from process_recipe.recipe import Recipe
 from chat.handle_question import handle_question
 
 app = Flask(__name__)
 CORS(app)
 
-curr_recipe = None
-curr_rec = None
-curr_ingredients = None
-curr_steps = None
+recipe = None
 allowed_domains = [
     "foodnetwork.com",
     "seriouseats.com",
@@ -29,11 +27,7 @@ def home():
 
 @app.post("/get-recipe")
 def get_recipe():
-    global curr_recipe
-    global curr_rec
-    global allowed_domains
-    global curr_ingredients
-    global curr_steps
+    global recipe
 
     data = request.get_json(silent=True) or {}
     url = data.get("url")
@@ -61,63 +55,54 @@ def get_recipe():
         return jsonify({"error": f"Upstream returned status {response.status_code}"}), 502
 
     soup = BeautifulSoup(response.text, "html.parser")
-    curr_recipe = url
-    curr_rec = str(soup)
+    recipe_url = url
+    recipe_text = str(soup)
 
     # Try to get the name of the page (recipe)
-    curr_recipe_name = None
+    recipe_name = None
     if soup.title:
-        curr_recipe_name = soup.title.get_text(strip=True)
+        recipe_name = soup.title.get_text(strip=True)
     # Try other selectors if title is absent or looks generic
-    if not curr_recipe_name or curr_recipe_name.lower() in ['untitled', 'recipe', 'foodnetwork.com']:
+    if not recipe_name or recipe_name.lower() in ['untitled', 'recipe', 'foodnetwork.com']:
         # Try h1 or class/id commonly used for recipe titles
         h1 = soup.find('h1')
         if h1 and h1.get_text(strip=True):
-            curr_recipe_name = h1.get_text(strip=True)
+            recipe_name = h1.get_text(strip=True)
 
     # Process the recipe and extract necessary information
-    ingredients = extract_ingredients(curr_rec)
-    curr_ingredients = ingredients
-
-    steps = extract_steps(curr_rec, ingredients)
-    curr_steps = steps
+    ingredients = extract_ingredients(recipe_text)
+    recipe = Recipe(
+        recipe_name,
+        recipe_url,
+        extract_ingredients(recipe_text), 
+        extract_steps(recipe_text, ingredients)
+    )
 
     return jsonify({
         "status": "saved",
-        "curr_recipe": curr_recipe,
-        "curr_recipe_name": curr_recipe_name,
-        "num_steps": len(steps)
+        "recipe_url": recipe.get_url(),
+        "recipe_name": recipe.get_name(),
+        "num_steps": len(recipe.get_steps())
     }), 200
-
-@app.get("/get-ingredients")
-def get_ingredients():
-    global curr_ingredients
-    if curr_ingredients is None:
-        return jsonify({"error": "No ingredients saved"}), 404
-    return jsonify({"ingredients": curr_ingredients}), 200
-
 
 
 @app.get("/get-steps")
 def get_steps():
-    global curr_steps
-    if curr_steps is None:
+    global recipe
+    if recipe.get_steps() is None:
         return jsonify({"error": "No steps saved"}), 404
-    return jsonify({"steps": curr_steps}), 200
+    return jsonify({"steps": recipe.get_steps()}), 200
 
 
 @app.post("/ask-question")
 def ask_question():
-    global curr_steps
-    global curr_ingredients
-    global curr_recipe
+    global recipe
 
     data = request.get_json(silent=True) or {}
     question = data.get("question")
 
 
-    # TODO: Implement this function
-    answer = handle_question(question)
+    answer = handle_question(question, recipe)
     
     return jsonify({"answer": answer}), 200
 

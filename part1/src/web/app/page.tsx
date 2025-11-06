@@ -24,6 +24,7 @@ export default function Home() {
   const [recipeName, setRecipeName] = useState<string | null>(null);
   const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Auto-scroll to bottom when messages change
   useEffect(() => {
@@ -88,11 +89,11 @@ export default function Home() {
           setUrlStatus("success");
           setError(null); // Clear any previous errors
           // Store recipe name and URL from API response
-          if (data.curr_recipe_name) {
-            setRecipeName(data.curr_recipe_name);
+          if (data.recipe_name) {
+            setRecipeName(data.recipe_name);
           }
-          if (data.curr_recipe) {
-            setRecipeUrl(data.curr_recipe);
+          if (data.recipe_url) {
+            setRecipeUrl(data.recipe_url);
           }
           // Add bot message when recipe is successfully processed
           setMessages([{ type: "bot", content: "Recipe processed! Ask a question" }]);
@@ -145,6 +146,8 @@ export default function Home() {
       }
     } finally {
       setSubmitting(false);
+      // Keep focus on input after submission
+      inputRef.current?.focus();
     }
   }
 
@@ -343,6 +346,7 @@ export default function Home() {
           )}
           <div className="relative">
             <input
+              ref={inputRef}
               className={`w-full rounded-xl border pr-12 px-4 py-3 outline-none transition-colors text-base placeholder-zinc-400 shadow-sm
                 ${
                   darkMode
