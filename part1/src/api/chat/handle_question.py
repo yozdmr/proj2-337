@@ -1,42 +1,61 @@
 import re
-from chat.question_bank import DIRECTIONAL_QUESTIONS, INGREDIENT_QUESTIONS
+from chat.question_bank import DIRECTIONAL_QUESTIONS, INGREDIENT_QUESTIONS, TIME_QUESTIONS
 from process_recipe.recipe import Recipe
 
 
 def classify_question(question: str) -> str:
-    question_clean = question.lower()
-    question_clean = re.sub(r"[^\w\s]", "", question_clean)
-    question_clean = " ".join(question_clean.split())
-    # Split into words
-    keywords = [w for w in question_clean.split() if w not in ("a", "an", "the")]
-
-
-    # Compute proportion match scores for each group by comparing cleaned keywords
-    def score_against_bank(question_keywords, bank):
-        max_score = 0
-        best_key = None
-        for k in bank:
-            k_words = [w for w in k.lower().split() if w not in ("a", "an", "the")]
-            if not k_words:
-                continue
-            match_count = sum(1 for word in k_words if word in question_keywords)
-            score = match_count / len(k_words)
-            if score > max_score:
-                max_score = score
-                best_key = k
-        return max_score, best_key
-
-    dir_score, dir_key = score_against_bank(keywords, DIRECTIONAL_QUESTIONS)
-    ingr_score, ingr_key = score_against_bank(keywords, INGREDIENT_QUESTIONS)
-
-    # Choose group with best score, threshold could be tuned
-    if dir_score >= ingr_score and dir_score > 0:
-        return DIRECTIONAL_QUESTIONS[dir_key]
-    elif ingr_score > 0:
-        return INGREDIENT_QUESTIONS[ingr_key]
-    else:
-        return "none"
-
+    # Normalize question: lowercase, remove punctuation, normalize whitespace
+    question_normalized = question.lower().strip()
+    question_normalized = re.sub(r"[^\w\s]", "", question_normalized)
+    question_normalized = " ".join(question_normalized.split())
+    
+    # Get question words (excluding common stop words for better matching)
+    stop_words = {"a", "an", "the", "is", "are", "what", "which", "when", "where", "who", "why", "yes", "no"}
+    question_words = set(w for w in question_normalized.split() if w not in stop_words)
+    
+    # All question banks to check
+    question_banks = [
+        DIRECTIONAL_QUESTIONS,
+        INGREDIENT_QUESTIONS,
+        TIME_QUESTIONS
+    ]
+    
+    best_match = None
+    best_match_score = 0
+    
+    # Check each question bank for matches
+    for bank in question_banks:
+        for key_phrase, category in bank.items():
+            # Normalize key phrase the same way
+            key_normalized = key_phrase.lower().strip()
+            key_normalized = re.sub(r"[^\w\s]", "", key_normalized)
+            key_normalized = " ".join(key_normalized.split())
+            
+            # Get key words (excluding stop words)
+            key_words = set(w for w in key_normalized.split() if w not in stop_words)
+            
+            # Step 1: Exact substring match
+            if key_normalized in question_normalized or question_normalized in key_normalized:
+                # Prefer longer matches (more specific)
+                score = len(key_normalized)
+                if score > best_match_score:
+                    best_match = category
+                    best_match_score = score
+            # Step 2: Word overlap (makes it more flexible)
+            elif key_words and question_words:
+                # Calculate overlap: how many key words appear in question
+                overlap = len(key_words & question_words)
+                # Score based on overlap ratio (prefer matches with more overlap)
+                overlap_ratio = overlap / len(key_words)
+                # Also consider the length of the key (prefer longer, more specific keys)
+                score = overlap_ratio * len(key_normalized)
+                
+                # Require at least 50% word overlap to consider it a match
+                if overlap_ratio >= 0.5 and score > best_match_score:
+                    best_match = category
+                    best_match_score = score
+    
+    return best_match if best_match else "none"
 
 
 def handle_question(question: str, recipe: Recipe) -> str:
@@ -49,5 +68,9 @@ def handle_question(question: str, recipe: Recipe) -> str:
     elif question_type in ["all_ingredients", "step_ingredients"]:
         # TODO: Flesh out the responses so that they contain relevant information
         return "Ingredient information"
+    elif question_type in ["time"]:
+        # TODO: Flesh out the responses so that they contain relevant information
+        return "Time information"
     else:
+        # TODO: Add "did you mean this?" functionality
         return "I'm sorry, I don't know the answer to that question."

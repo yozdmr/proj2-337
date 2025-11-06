@@ -29,8 +29,6 @@ class Recipe:
 
         step_one = steps[0]
 
-        print(step_one)
-
         root_node = RecipeNode(
             step_number=step_one["step_number"],
             description=step_one["description"],
