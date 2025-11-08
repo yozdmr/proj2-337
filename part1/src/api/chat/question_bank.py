@@ -21,6 +21,7 @@ DIRECTIONAL_QUESTIONS = {
     "did before": "previous_step",
     
     # Current step
+    "step": "current_step",
     "is current step": "current_step",
     "current step": "current_step",
     "this step": "current_step",
@@ -34,6 +35,7 @@ DIRECTIONAL_QUESTIONS = {
 
 INGREDIENT_QUESTIONS = {
     # Get all ingredients in the recipe
+    "ingredients": "all_ingredients",
     "are the ingredients": "all_ingredients",
     "are the ingredients to use in this recipe": "all_ingredients",
     "ingredients should i use": "all_ingredients",
@@ -43,15 +45,17 @@ INGREDIENT_QUESTIONS = {
     "ingredients are used": "all_ingredients",
 
     # Get ingredients for a specific step
-    " ingredients are used in this step": "step_ingredients",
-    " ingredients should i use in this step": "step_ingredients",
-    " ingredients do i need in this step": "step_ingredients",
-    " ingredients are needed in this step": "step_ingredients",
-    " ingredients are required in this step": "step_ingredients",
-    " ingredients in this step": "step_ingredients"
+    "this ingredients": "step_ingredients",
+    "ingredients are used in this step": "step_ingredients",
+    "ingredients should i use in this step": "step_ingredients",
+    "ingredients do i need in this step": "step_ingredients",
+    "ingredients are needed in this step": "step_ingredients",
+    "ingredients are required in this step": "step_ingredients",
+    "ingredients in this step": "step_ingredients"
 }
 
 TIME_QUESTIONS = {
+    "time": "time",
     "how long does this step take": "time",
     "how long does this take": "time",
     "how long does it take": "time",
