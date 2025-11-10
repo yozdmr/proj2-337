@@ -24,6 +24,7 @@ class Recipe:
         self.steps = steps
 
         self.current_step = self.create_nodes(steps)
+        self.first_step = self.current_step
 
     def create_nodes(self, steps: list[dict]) -> RecipeNode:
 
@@ -42,7 +43,6 @@ class Recipe:
         )
 
         current_node = root_node
-        prev_node = root_node
         for step in steps[1:]:
             current_node.next = RecipeNode(
                 step_number=step["step_number"],
@@ -52,10 +52,9 @@ class Recipe:
                 methods=step["methods"],
                 time=step["time"],
                 temperature=step.get("temperature", {}),
-                previous=prev_node,
+                previous=current_node,
                 next=None
             )
-            prev_node = current_node
             current_node = current_node.next
 
         return root_node
@@ -73,13 +72,11 @@ class Recipe:
         return self.steps
 
     def step_forward(self) -> RecipeNode:
-        if self.current_step.next is None:
-            return None
-        self.current_step = self.current_step.next
+        if self.current_step.next is not None:
+            self.current_step = self.current_step.next
         return self.current_step
 
     def step_backward(self) -> RecipeNode:
-        if self.current_step.previous is None:
-            return None
-        self.current_step = self.current_step.previous
+        if self.current_step.previous is not None:
+            self.current_step = self.current_step.previous
         return self.current_step

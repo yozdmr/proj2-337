@@ -9,6 +9,7 @@ DIRECTIONAL_QUESTIONS = {
     "is next": "next_step",
     "next step": "next_step",
     "happens next": "next_step",
+    "what is the next step": "next_step",
 
     # Previous step
     "is previous step": "previous_step",
@@ -19,6 +20,7 @@ DIRECTIONAL_QUESTIONS = {
     "happened previously": "previous_step",
     "did previously": "previous_step",
     "did before": "previous_step",
+    "what is the previous step": "previous_step",
     
     # Current step
     "step": "current_step",
@@ -27,6 +29,12 @@ DIRECTIONAL_QUESTIONS = {
     "this step": "current_step",
     "happens now": "current_step",
     "do now": "current_step",
+
+    # First step
+    "first step": "first_step",
+    "what do i do first": "first_step",
+    "what is the first step": "first_step",
+    "what is the first step in the recipe": "first_step"
 }
 
 # Ingredient questions
@@ -43,6 +51,10 @@ INGREDIENT_QUESTIONS = {
     "ingredients are needed": "all_ingredients",
     "ingredients are required": "all_ingredients",
     "ingredients are used": "all_ingredients",
+    "ingredients in this recipe": "all_ingredients",
+    "ingredients do i need in this recipe": "all_ingredients",
+    "ingredients in the instructions": "all_ingredients",
+    "all the ingredients": "all_ingredients",
 
     # Get ingredients for a specific step
     "this ingredients": "step_ingredients",

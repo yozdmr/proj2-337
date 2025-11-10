@@ -80,12 +80,60 @@ def handle_question(question: str, recipe: Recipe) -> str:
     
     question_type = classify_question(question)
 
-    if question_type in ["next_step", "previous_step", "current_step"]:
-        # TODO: Flesh out the responses so that they contain relevant information and update states
-        return "Step information"
+    if question_type in ["next_step", "previous_step", "current_step", "first_step"]:
+        if question_type == "next_step":
+            curr_step = recipe.step_forward()
+        elif question_type == "previous_step":
+            curr_step = recipe.step_backward()
+        elif question_type == "current_step":
+            curr_step = recipe.current_step
+        elif question_type == "first_step":
+            # Avoid updating recipe.first_step so that it remains the same 
+            first_step = recipe.first_step
+            return f"<h4 class='chat-header'>Step {first_step.step_number}:</h4><p>{first_step.description}</p>"
+
+        # Construct response
+        response = f"<h4 class='chat-header'>Step {curr_step.step_number}:</h4><p>{curr_step.description}</p>"
+        return response
+        
     elif question_type in ["all_ingredients", "step_ingredients"]:
-        # TODO: Flesh out the responses so that they contain relevant information
-        return "Ingredient information"
+        if question_type == "all_ingredients":
+            header = "Ingredients in the recipe:"
+            ingredients = recipe.ingredients
+        elif question_type == "step_ingredients":
+            header = "Ingredients for this step:"
+            ingredients = recipe.current_step.ingredients
+
+        if len(ingredients) == 0 and header.split(" ")[-1] == "step:":
+            return "There are no ingredients for this step."
+        
+        # Construct response with custom CSS class
+        response = f'<h4 class="chat-header">{header}</h4><ul class="ingredient-list">'
+
+        for ingredient in ingredients:
+            response += f"<li>"
+            if ingredient['descriptor'] is not None:
+                desc_and_name = ingredient['descriptor'] + " " + ingredient['name']
+            else:
+                desc_and_name = ingredient['name']
+            
+            if len(desc_and_name) > 1:
+                desc_and_name = desc_and_name[0].upper() + desc_and_name[1:]
+            
+            
+            response += f"{desc_and_name}: {ingredient['quantity']}"
+
+            if ingredient['measurement'] is not None:
+                response += f" {ingredient['measurement']}"
+            
+            if ingredient['preparation'] is not None:
+                response += f' <span>({ingredient["preparation"]})</span>'
+            response += "</li>"
+        response += "</ul>"
+        
+        return response
+
+
     elif question_type in ["time"]:
         # TODO: Flesh out the responses so that they contain relevant information
         return "Time information"

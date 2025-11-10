@@ -24,3 +24,23 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+
+
+/* Custom CSS classes for chat output */
+h4.chat-header {
+  @apply font-bold text-lg mb-2;
+}
+
+.ingredient-list {
+  @apply list-disc list-inside pl-0 my-2;
+}
+
+.ingredient-list li {
+  @apply my-1 pl-3 leading-relaxed;
+}
+
+.ingredient-list li span {
+  @apply text-sm italic opacity-80;
+}
+

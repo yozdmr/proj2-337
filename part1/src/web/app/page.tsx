@@ -23,6 +23,7 @@ export default function Home() {
   const [urlStatus, setUrlStatus] = useState<"loading" | "success" | "error" | null>(null);
   const [recipeName, setRecipeName] = useState<string | null>(null);
   const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
+  const [showFadeIn, setShowFadeIn] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -30,6 +31,18 @@ export default function Home() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  // Trigger fade-in after input box transition completes (500ms)
+  useEffect(() => {
+    if (urlStatus === "success") {
+      const timer = setTimeout(() => {
+        setShowFadeIn(true);
+      }, 500);
+      return () => clearTimeout(timer);
+    } else {
+      setShowFadeIn(false);
+    }
+  }, [urlStatus]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -193,7 +206,7 @@ export default function Home() {
         </div>
         {/* Submitted URL display */}
         {submittedUrl && (
-          <div className="w-full flex justify-center mb-12">
+          <div className="w-full flex justify-center mb-10">
             <span
               className={`italic text-zinc-500 px-3 py-1 rounded-xl transition-colors ${
                 urlStatus === "loading"
@@ -230,40 +243,12 @@ export default function Home() {
               
               return (
               <div key={i} className="relative" style={{ alignSelf: msg.type === "user" ? "flex-end" : "flex-start" }}>
-                {/* Tail for bot messages (left side) */}
-                {msg.type === "bot" && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      left: '-8px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 0,
-                      height: 0,
-                      borderTop: '8px solid transparent',
-                      borderBottom: '8px solid transparent',
-                      borderRight: `8px solid ${bgColor}`,
-                    }}
-                  />
-                )}
-                {/* Tail for user messages (right side) */}
-                {msg.type === "user" && (
-                  <div
-                    style={{
-                      position: 'absolute',
-                      right: '-8px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      width: 0,
-                      height: 0,
-                      borderTop: '8px solid transparent',
-                      borderBottom: '8px solid transparent',
-                      borderLeft: `8px solid ${bgColor}`,
-                    }}
-                  />
-                )}
                 <div
-                  className={`px-4 py-3 rounded-xl max-w-full whitespace-pre-line transition-colors ${
+                  className={`px-4 py-3 rounded-xl ${
+                    msg.type === "user"
+                      ? "rounded-br-none"
+                      : "rounded-bl-none"
+                  } max-w-full whitespace-pre-line transition-colors ${
                     msg.type === "user"
                       ? darkMode
                         ? "bg-orange-600 text-white"
@@ -317,13 +302,57 @@ export default function Home() {
         </section>
         {/* Divider above text input box */}
         {messages.length > 0 && urlStatus === "success" && (
+          <div>
+            <div 
+              className="w-2/3 border-t border-zinc-300 dark:border-zinc-700 absolute left-1/2 -translate-x-1/2"
+              style={{
+                bottom: 'calc(8rem + 11px)',
+                transition: 'bottom 500ms ease-in-out, opacity 500ms ease-in-out',
+                opacity: showFadeIn ? 1 : 0
+              }}
+            ></div>
+          </div>
+        )}
+        {/* Suggestion buttons - show after recipe is processed, before first question */}
+        {urlStatus === "success" && !messages.some(msg => msg.type === "user") && (
           <div 
-            className="w-2/3 border-t border-zinc-300 dark:border-zinc-700 absolute left-1/2 -translate-x-1/2"
+            className="w-2/3 absolute left-1/2 -translate-x-1/2 flex flex-col gap-2"
             style={{
-              bottom: 'calc(8rem + 11px)',
-              transition: 'bottom 500ms ease-in-out'
+              bottom: 'calc(8rem + 11px + 1rem)',
+              transition: 'bottom 500ms ease-in-out, opacity 500ms ease-in-out',
+              opacity: showFadeIn ? 1 : 0
             }}
-          ></div>
+          >
+            <h4 className="text-sm text-zinc-500 text-left ml-2 font-medium italic">Suggestions:</h4>
+            <button
+              type="button"
+              onClick={() => {
+                setInput("What should I do first?");
+                inputRef.current?.focus();
+              }}
+              className={`w-full rounded-xl border px-4 py-2 text-sm text-left transition-colors hover:border-orange-500 ${
+                darkMode
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-100 hover:bg-zinc-700"
+                  : "bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200"
+              }`}
+            >
+              What should I do first?
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setInput("What ingredients do I need in this recipe?");
+                inputRef.current?.focus();
+              }}
+              className={`w-full rounded-xl border px-4 py-2 text-sm text-left transition-colors hover:border-orange-500 ${
+                darkMode
+                  ? "bg-zinc-800 border-zinc-700 text-zinc-100 hover:bg-zinc-700"
+                  : "bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200"
+              }`}
+            >
+              What ingredients do I need in this recipe?
+            </button>
+          </div>
         )}
         {/* Input form */}
         {/* Disgusting transition code that makes it move down when recipe is inputted */}
@@ -388,7 +417,13 @@ export default function Home() {
         )}
         {/* Footer */}
         {urlStatus === "success" && (
-          <footer className="mt-4 text-sm text-zinc-400 text-center">
+          <footer 
+            className="mt-4 text-sm text-zinc-400 text-center"
+            style={{
+              opacity: showFadeIn ? 1 : 0,
+              transition: 'opacity 500ms ease-in-out'
+            }}
+          >
             API: <span className="font-mono">localhost:8080/ask-question</span>
           </footer>
         )}
