@@ -1,9 +1,8 @@
 import re
 from typing import Dict, List, Optional, Tuple, Any
 
-# -----------------------------
+
 # Time patterns
-# -----------------------------
 VULGAR_MAP = {
     '½': '1/2', '⅓': '1/3', '¼': '1/4', '¾': '3/4', '⅔': '2/3',
     '⅛': '1/8', '⅜': '3/8', '⅝': '5/8', '⅞': '7/8'
@@ -18,11 +17,11 @@ def _to_float(num: str) -> Optional[float]:
     num = num.strip()
     num = _normalize_frac(num)
     try:
-        if ' ' in num and '/' in num:  # "1 1/2"
+        if ' ' in num and '/' in num: 
             a,b = num.split(' ',1)
             n,d = b.split('/',1)
             return float(a) + float(n)/float(d)
-        if '/' in num:  # "1/2"
+        if '/' in num: 
             n,d = num.split('/',1)
             return float(n)/float(d)
         return float(num)
@@ -45,7 +44,7 @@ RE_PER_SIDE = re.compile(r'\bper\s+side\b', re.I)
 RE_AT_LEAST = re.compile(r'\b(at\s+least|minimum(?: of)?)\b', re.I)
 RE_AT_MOST  = re.compile(r'\b(at\s+most|no\s+more\s+than|maximum(?: of)?)\b', re.I)
 RE_APPROX   = re.compile(r'\b(about|around|approximately|approx\.?)\b', re.I)
-DONE_CUES   = re.compile(r'\buntil\b[^.]+', re.I)  # grab "until ..." clause loosely
+DONE_CUES   = re.compile(r'\buntil\b[^.]+', re.I)  
 
 def _unit_to_minutes(u: str) -> float:
     u = u.lower()
@@ -60,7 +59,7 @@ def extract_time_info(text: str) -> Dict[str, Any]:
     tmin: Optional[float] = None
     tmax: Optional[float] = None
 
-    # Range like 20-25 minutes
+    # Range
     for m in RE_RANGE.finditer(text):
         a,b,u = int(m.group('a')), int(m.group('b')), m.group('u')
         mult = _unit_to_minutes(u)
@@ -73,7 +72,7 @@ def extract_time_info(text: str) -> Dict[str, Any]:
         tmin = mn if tmin is None else min(tmin, mn)
         tmax = mx if tmax is None else max(tmax, mx)
 
-    # Combo like 1 hr 30 min
+    # Combo such as 1 hr 30 min
     for m in RE_COMBO.finditer(text):
         h = _to_float(m.group('h')) or 0.0
         mn = _to_float(m.group('m')) or 0.0
@@ -86,7 +85,7 @@ def extract_time_info(text: str) -> Dict[str, Any]:
         tmin = minutes if tmin is None else min(tmin, minutes)
         tmax = minutes if tmax is None else max(tmax, minutes)
 
-    # Standalone units
+    # other
     for m in RE_HOURS.finditer(text):
         h = _to_float(m.group('h')) or 0.0
         minutes = h*60
@@ -124,12 +123,10 @@ def extract_time_info(text: str) -> Dict[str, Any]:
             "approx": approx, "per_side": bool(RE_PER_SIDE.search(text)),
             "at_least": at_least, "at_most": at_most
         })
-        # seconds are tiny; we keep aggregate in minutes
         mn = ss/60.0
         tmin = mn if tmin is None else min(tmin, mn)
         tmax = mn if tmax is None else max(tmax, mn)
 
-    # qualitative done cues
     quals = []
     for m in DONE_CUES.finditer(text):
         quals.append(m.group(0).strip())
@@ -142,7 +139,6 @@ def extract_time_info(text: str) -> Dict[str, Any]:
     if tmax is not None:
         info["max_seconds"] = int(tmax*60)
 
-    # convenience string for UI
     def _fmt(sec: int) -> str:
         m, s = divmod(int(sec), 60)
         h, m = divmod(m, 60)
@@ -159,9 +155,8 @@ def extract_time_info(text: str) -> Dict[str, Any]:
 
     return info
 
-# -----------------------------
+
 # Temperature patterns
-# -----------------------------
 RE_F = re.compile(r'(?P<v>\d{2,3})\s*°?\s*(?:degrees?\s*)?F\b', re.I)
 RE_C = re.compile(r'(?P<v>\d{2,3})\s*°?\s*(?:degrees?\s*)?C\b', re.I)
 RE_BOTH = re.compile(r'(?P<f>\d{2,3})\s*°?\s*(?:degrees?\s*)?F\s*\(\s*(?P<c>\d{2,3})\s*°?\s*C\s*\)', re.I)
@@ -194,7 +189,6 @@ def extract_temperature_info(text: str, context: Optional[Dict[str, Any]] = None
         if mc:
             val = int(mc.group('v'))
             t["mentions"].append({"text": mc.group(0), "value": val, "unit": "C", "device": "oven"})
-            # Don't overwrite 'oven' string if F already set
             if "oven" not in t:
                 t["oven"] = f"{val} C"
             ctx_upd.setdefault("oven", {})
@@ -207,7 +201,7 @@ def extract_temperature_info(text: str, context: Optional[Dict[str, Any]] = None
         t["mentions"].append({"text": ms.group(0), "qualitative": f"{qual} heat", "device": "stovetop"})
         t["stovetop"] = f"{qual} heat"
 
-    # If baking verbs but no explicit temp, try to fill from context
+    # if no explicit temp, fill from context
     if re.search(r'\b(bake|roast|broil)\b', text, re.I) and "oven" in context and "oven" not in t:
         ov = context["oven"]
         if "F" in ov:
@@ -217,7 +211,6 @@ def extract_temperature_info(text: str, context: Optional[Dict[str, Any]] = None
             t["oven"] = f"{ov['C']} C"
             t["mentions"].append({"text": "(from context)", "value": ov["C"], "unit": "C", "device": "oven"})
 
-    # Clean if nothing found
     if not t.get("mentions"):
         t = {}
 
