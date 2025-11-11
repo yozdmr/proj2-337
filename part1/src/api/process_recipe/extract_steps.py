@@ -58,6 +58,8 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
     steps_list: Optional[Tag] = header.find_next("ol")
     if not steps_list:
         return []   
+    
+    context={}
 
     # Loop through steps in ordered list
     steps: list[dict] = []
@@ -78,10 +80,13 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
             "ingredients": step_ingredients,
             "tools": extract_tools(description),  # TODO implement this function
             "methods": extract_methods(description),  # TODO implement this function
-            "time": {
-                "duration": "TEMP_VAL",  # TODO str or dict of sub-times
-            }
+            "time": extract_time_info(description)
         }
+        temp_info, ctx_upd = extract_temperature_info(description, context)
+        if temp_info:
+            step["temperature"] = temp_info
+        if ctx_upd:
+            context.update(ctx_upd)
 
         if False:  # TODO implement optional temperature extraction
             step["temperature"] = {
