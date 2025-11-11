@@ -94,3 +94,37 @@ TIME_QUESTIONS = {
     "how much time will it take to bake": "time",
     "how much time will it take to prepare": "time",
 }
+
+AFFIRMATIONS = {
+    # Positive answers
+    "yes": "yes",
+    "yeah": "yes",
+    "yep": "yes",
+    "yup": "yes",
+    "sure": "yes",
+    "definitely": "yes",
+    "absolutely": "yes",
+    "certainly": "yes",
+    "indeed": "yes",
+    "affirmative": "yes",
+
+    # Negative answers
+    "no": "no",
+    "nope": "no",
+    "nah": "no",
+    "no way": "no",
+    "not sure": "no",
+    "not sure about that": "no",
+    "negative": "no",
+}
+
+
+
+
+# NOTE: Add question banks here
+QUESTION_BANK = [
+    DIRECTIONAL_QUESTIONS,
+    INGREDIENT_QUESTIONS,
+    TIME_QUESTIONS,
+    AFFIRMATIONS
+]

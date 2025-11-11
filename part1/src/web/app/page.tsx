@@ -1,5 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import SuggestionButton from "./components/SuggestionButton";
 
 function isValidUrl(urlStr: string) {
   try {
@@ -16,7 +17,7 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [messages, setMessages] = useState<
-    { type: "user" | "bot"; content: string }[]
+    { type: "user" | "bot"; content: string; suggestions?: Record<string, string> }[]
   >([]);
   const [darkMode, setDarkMode] = useState(false);
   const [submittedUrl, setSubmittedUrl] = useState<string | null>(null);
@@ -129,6 +130,7 @@ export default function Home() {
         data = await res.json();
 
         let reply: string;
+        let suggestions: Record<string, string> | undefined;
         if (data.answer) {
           reply = data.answer;
         } else if (data.message) {
@@ -137,9 +139,14 @@ export default function Home() {
           reply = "Sorry, I couldn't process your question.";
         }
 
+        // Extract suggestions if present (expecting a dictionary/object)
+        if (data.suggestions && typeof data.suggestions === "object" && !Array.isArray(data.suggestions)) {
+          suggestions = data.suggestions;
+        }
+
         setMessages((msgs) => [
           ...msgs.slice(0, msgs.length - 1),
-          { type: "bot", content: reply },
+          { type: "bot", content: reply, suggestions },
         ]);
       }
 
@@ -176,7 +183,40 @@ export default function Home() {
         }`}
       >
         {/* Header */}
-        <div className="w-full flex items-center justify-center mb-6 relative">
+        <div className="w-full flex items-center justify-center mb-8 relative">
+          {/* Recipe status circle - left side */}
+          {urlStatus === "success" && recipeUrl ? (
+            <a
+              href={recipeUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute left-0 transition-colors rounded-full p-2 hover:bg-green-300 bg-green-400"
+            >
+              {/* Journal icon - https://icons.getbootstrap.com/icons/journal-bookmark/ */}
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="white" className="bi bi-journal-bookmark" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M6 8V1h1v6.117L8.743 6.07a.5.5 0 0 1 .514 0L11 7.117V1h1v7a.5.5 0 0 1-.757.429L9 7.083 6.757 8.43A.5.5 0 0 1 6 8"/>
+                <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2"/>
+                <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/>
+              </svg>
+            </a>
+          ) : (
+            <div
+              className={`absolute left-0 transition-colors rounded-full p-2 ${
+                urlStatus === "loading"
+                  ? "bg-orange-400"
+                  : urlStatus === "error"
+                  ? "bg-red-400"
+                  : "bg-gray-400"
+              }`}
+            >
+              {/* Journal icon - https://icons.getbootstrap.com/icons/journal-bookmark/ */}
+              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="white" className="bi bi-journal-bookmark" viewBox="0 0 16 16">
+                <path fillRule="evenodd" d="M6 8V1h1v6.117L8.743 6.07a.5.5 0 0 1 .514 0L11 7.117V1h1v7a.5.5 0 0 1-.757.429L9 7.083 6.757 8.43A.5.5 0 0 1 6 8"/>
+                <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2"/>
+                <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/>
+              </svg>
+            </div>
+          )}
           <h1 className={`text-center text-4xl font-bold tracking-tight ${darkMode ? "text-white" : "text-black"}`}>
             Welcome to{" "}
             <span className="bg-orange-500 text-white px-2 py-1 rounded">
@@ -204,35 +244,8 @@ export default function Home() {
             )}
           </button>
         </div>
-        {/* Submitted URL display */}
-        {submittedUrl && (
-          <div className="w-full flex justify-center mb-10">
-            <span
-              className={`italic text-zinc-500 px-3 py-1 rounded-xl transition-colors ${
-                urlStatus === "loading"
-                  ? "bg-orange-200"
-                  : urlStatus === "success"
-                  ? "bg-green-200"
-                  : urlStatus === "error"
-                  ? "bg-red-200"
-                  : ""
-              }`}
-            >
-              {urlStatus === "success" && recipeName && recipeUrl ? (
-                <a
-                  href={recipeUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-zinc-500 hover:text-zinc-700 underline"
-                >
-                  {recipeName}
-                </a>
-              ) : (
-                submittedUrl
-              )}
-            </span>
-          </div>
-        )}
+        {/* Divider between header and chat history */}
+        <div className={`w-full border-t mb-4 ${darkMode ? "border-zinc-700" : "border-zinc-300"}`}></div>
         {/* Chat history */}
         <section className={`w-full flex-1 overflow-y-scroll px-4 ${messages.length > 0 ? "mb-14" : ""}`}>
           <div className="flex flex-col gap-4">
@@ -283,13 +296,33 @@ export default function Home() {
                       </svg>
                     </div>
                   ) : msg.type === "bot" ? (
-                    <span
-                      dangerouslySetInnerHTML={{
-                        __html: msg.content
-                          .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-                          .replace(/\n/g, "<br/>"),
-                      }}
-                    />
+                    <>
+                      <span
+                        dangerouslySetInnerHTML={{
+                          __html: msg.content
+                            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+                            .replace(/\n/g, "<br/>"),
+                        }}
+                      />
+                      {msg.suggestions && Object.keys(msg.suggestions).length > 0 && (
+                        <div className={`mt-4 pt-3 border-t flex flex-row flex-wrap gap-2 ${
+                          darkMode ? "border-zinc-700" : "border-zinc-300"
+                        }`}>
+                          {Object.entries(msg.suggestions).map(([text, question], idx) => (
+                            <SuggestionButton
+                              key={idx}
+                              text={text}
+                              question={question}
+                              onClick={(question) => {
+                                setInput(question);
+                                inputRef.current?.focus();
+                              }}
+                              darkMode={darkMode}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </>
                   ) : (
                     msg.content
                   )}
@@ -324,34 +357,26 @@ export default function Home() {
             }}
           >
             <h4 className="text-sm text-zinc-500 text-left ml-2 font-medium italic">Suggestions:</h4>
-            <button
-              type="button"
-              onClick={() => {
-                setInput("What should I do first?");
+            <SuggestionButton
+              text="What should I do first?"
+              question="What should I do first?"
+              onClick={(question) => {
+                setInput(question);
                 inputRef.current?.focus();
               }}
-              className={`w-full rounded-xl border px-4 py-2 text-sm text-left transition-colors hover:border-orange-500 ${
-                darkMode
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-100 hover:bg-zinc-700"
-                  : "bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200"
-              }`}
-            >
-              What should I do first?
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setInput("What ingredients do I need in this recipe?");
+              darkMode={darkMode}
+              fullWidth={true}
+            />
+            <SuggestionButton
+              text="What ingredients do I need in this recipe?"
+              question="What ingredients do I need in this recipe?"
+              onClick={(question) => {
+                setInput(question);
                 inputRef.current?.focus();
               }}
-              className={`w-full rounded-xl border px-4 py-2 text-sm text-left transition-colors hover:border-orange-500 ${
-                darkMode
-                  ? "bg-zinc-800 border-zinc-700 text-zinc-100 hover:bg-zinc-700"
-                  : "bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200"
-              }`}
-            >
-              What ingredients do I need in this recipe?
-            </button>
+              darkMode={darkMode}
+              fullWidth={true}
+            />
           </div>
         )}
         {/* Input form */}

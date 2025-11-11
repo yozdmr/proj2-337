@@ -102,9 +102,16 @@ def ask_question():
     question = data.get("question")
 
 
-    answer = handle_question(question, recipe)
+    result = handle_question(question, recipe)
     
-    return jsonify({"answer": answer}), 200
+    # Handle both old string format and new dict format for backward compatibility
+    if isinstance(result, str):
+        return jsonify({"answer": result}), 200
+    else:
+        response = {"answer": result["answer"]}
+        if result.get("suggestions"):
+            response["suggestions"] = result["suggestions"]
+        return jsonify(response), 200
 
 
 if __name__ == "__main__":

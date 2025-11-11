@@ -1,7 +1,12 @@
 import re
-from chat.question_bank import DIRECTIONAL_QUESTIONS, INGREDIENT_QUESTIONS, TIME_QUESTIONS
+from chat.question_bank import QUESTION_BANK
+from chat.frame_response.frame_ingredients import return_ingredients_response
+
 from process_recipe.recipe import Recipe
 
+
+global previous_question
+previous_question = None
 
 def classify_question(question: str) -> str:
     # Normalize question: lowercase, remove punctuation, normalize whitespace
@@ -13,19 +18,12 @@ def classify_question(question: str) -> str:
     stop_words = {"a", "an", "the", "is", "are", "what", "which", "when", "where", "who", "why", "yes", "no"}
     question_words = set(w for w in question_normalized.split() if w not in stop_words)
     
-    # All question banks to check
-    question_banks = [
-        DIRECTIONAL_QUESTIONS,
-        INGREDIENT_QUESTIONS,
-        TIME_QUESTIONS
-    ]
-    
     best_match = None
     best_match_score = 0
     exact_match_found = False
     
     # Check each question bank for matches
-    for bank in question_banks:
+    for bank in QUESTION_BANK:
         for key_phrase, category in bank.items():
             # Normalize key phrase the same way
             key_normalized = key_phrase.lower().strip()
@@ -76,67 +74,96 @@ def classify_question(question: str) -> str:
     return best_match if best_match else "none"
 
 
-def handle_question(question: str, recipe: Recipe) -> str:
+def handle_question(question: str, recipe: Recipe) -> dict:
+    global previous_question
     
     question_type = classify_question(question)
 
     if question_type in ["next_step", "previous_step", "current_step", "first_step"]:
-        if question_type == "next_step":
-            curr_step = recipe.step_forward()
-        elif question_type == "previous_step":
-            curr_step = recipe.step_backward()
-        elif question_type == "current_step":
-            curr_step = recipe.current_step
-        elif question_type == "first_step":
+
+        # Set previous question, because the bot's response
+        #   asks yes/no question at the end
+        previous_question = question_type
+
+        if question_type == "first_step":
             # Avoid updating recipe.first_step so that it remains the same 
             first_step = recipe.first_step
-            return f"<h4 class='chat-header'>Step {first_step.step_number}:</h4><p>{first_step.description}</p>"
+            answer = f"<h4 class='chat-header'>Step {first_step.step_number}:</h4><p>{first_step.description}</p>\n<p>Would you like to know about the ingredients used in this step?</p>"
 
-        # Construct response
-        response = f"<h4 class='chat-header'>Step {curr_step.step_number}:</h4><p>{curr_step.description}</p>"
-        return response
+        else:
+            if question_type == "next_step":
+                curr_step = recipe.step_forward()
+            elif question_type == "previous_step":
+                curr_step = recipe.step_backward()
+            elif question_type == "current_step":
+                curr_step = recipe.current_step
+
+            # Construct response
+            answer = f"<h4 class='chat-header'>Step {curr_step.step_number}:</h4><p>{curr_step.description}</p>\n<p>Would you like to know about the ingredients used in this step?</p>"
+        
+        return {
+            "answer": answer,
+            "suggestions": {
+                # visible text, text to put in the input field
+                "What should I do next?": "What do I do next?",
+                "What are the methods?": "What methods are used in this step?",
+                "What ingredients do I need?": "What ingredients do I need in this step?"
+            }
+        }
         
     elif question_type in ["all_ingredients", "step_ingredients"]:
-        if question_type == "all_ingredients":
-            header = "Ingredients in the recipe:"
-            ingredients = recipe.ingredients
-        elif question_type == "step_ingredients":
-            header = "Ingredients for this step:"
-            ingredients = recipe.current_step.ingredients
-
-        if len(ingredients) == 0 and header.split(" ")[-1] == "step:":
-            return "There are no ingredients for this step."
-        
-        # Construct response with custom CSS class
-        response = f'<h4 class="chat-header">{header}</h4><ul class="ingredient-list">'
-
-        for ingredient in ingredients:
-            response += f"<li>"
-            if ingredient['descriptor'] is not None:
-                desc_and_name = ingredient['descriptor'] + " " + ingredient['name']
-            else:
-                desc_and_name = ingredient['name']
-            
-            if len(desc_and_name) > 1:
-                desc_and_name = desc_and_name[0].upper() + desc_and_name[1:]
-            
-            
-            response += f"{desc_and_name}: {ingredient['quantity']}"
-
-            if ingredient['measurement'] is not None:
-                response += f" {ingredient['measurement']}"
-            
-            if ingredient['preparation'] is not None:
-                response += f' <span>({ingredient["preparation"]})</span>'
-            response += "</li>"
-        response += "</ul>"
-        
-        return response
+        answer = return_ingredients_response(recipe, question_type)
+        return {
+            "answer": answer,
+            "suggestions": {
+                "What methods should I use?": "What methods should I use in this step?",
+                "How long will this step take?": "How long will this step take?"
+            }
+        }
 
 
     elif question_type in ["time"]:
         # TODO: Flesh out the responses so that they contain relevant information
-        return "Time information"
+        return {
+            "answer": "Time information",
+            "suggestions": None
+        }
+
+
+    # Affirmation responses (in response to a yes/no question from the previous bot response)
+    #  As of right now, when asking for STEP information, the bot will ask:
+    #    "Would you like to know about the ingredients used in this step?"
+    # And this code handles it accordingly
+    elif question_type in ["yes", "no"]:        
+        # If no, await next question from user
+        if question_type == "no":
+            return {
+                "answer": "Alright. What else would you like to know?",
+                "suggestions": {
+                    "What should I do now?": "What should I do now?",
+                    "Ingredients this step.": "What ingredients do I need this step?"
+                }
+            }
+
+        # If yes, return appropriate response
+        #  GIVEN PREVIOUS QUESTION
+        elif question_type == "yes":
+            #  If previous question is None there is nothing to respond to
+            if previous_question is None:
+                return "I'm sorry, I'm not sure what you're responding to."
+
+            # Return appropriate response based on previous question
+            if previous_question in ["next_step", "previous_step", "current_step"]:
+                resp = return_ingredients_response(recipe, "step_ingredients")
+            elif previous_question in ["first_step"]:
+                resp = return_ingredients_response(recipe, get_first=True)
+            # elif ...
+
+            # Reset previous question
+            previous_question = None
+            return resp
+
+
     else:
-        # TODO: Add "did you mean this?" functionality
+        # TODO: Maybe add "did you mean this?" functionality
         return "I'm sorry, I don't know the answer to that question."
