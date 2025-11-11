@@ -66,7 +66,19 @@ INGREDIENT_QUESTIONS = {
     "ingredients do i need in this step": "step_ingredients",
     "ingredients are needed in this step": "step_ingredients",
     "ingredients are required in this step": "step_ingredients",
-    "ingredients in this step": "step_ingredients"
+    "ingredients in this step": "step_ingredients",
+
+    # Quantity of an ingredient:
+    "how much do i need": "how_much_ingredient",
+    "how many do i need": "how_much_ingredient",
+    "how much of do i need": "how_much_ingredient",
+    "how many of do i need": "how_much_ingredient",
+
+    # Replacement of ingredient:
+    "what can i use instead": "replacement_ingredient",
+    "what can i use instead of": "replacement_ingredient",
+    "what can i use instead of this": "replacement_ingredient",
+
 }
 
 TIME_QUESTIONS = {

@@ -139,6 +139,27 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         return previous_answer
 
 
+    elif question_type in ["how_much_ingredient"]:
+        # TODO Xinhe implement this
+
+        # The 'recipe' is passed to this function
+        # Do 'recipe.ingredients' to get the dictionary of ingredients
+        #  Each ingredient is a dictionary with the following keys:
+        # "name"
+        # "quantity"
+        # "measurement"
+        # "descriptor"
+        # "preparation"
+
+
+
+        return "HOW MUCH!!!!"
+
+
+
+        # NOTE: Store your answer in previous_answer then return it
+        # so that we can track the conversation history
+
     elif question_type in ["time"]:
         step = recipe.current_step
         tinfo = getattr(step, "time", None) or {}
