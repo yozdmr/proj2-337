@@ -140,12 +140,47 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
 
     elif question_type in ["time"]:
-        # TODO: Flesh out the responses so that they contain relevant information
-        previous_answer = {
-            "answer": "Time information",
-            "suggestions": None
-        }
+        step = recipe.current_step
+        tinfo = getattr(step, "time", None) or {}
+        def fmt(sec: int) -> str:
+            m, s = divmod(int(sec), 60)
+            h, m = divmod(m, 60)
+            if h: 
+                return f"{h} hr {m} min" if m else f"{h} hr"
+            if m: 
+                return f"{m} min"
+            return f"{s} sec"
+        answer = "I couldn't find an explicit time for this step."
+        if tinfo:
+            if tinfo.get("min_seconds") is not None and tinfo.get("max_seconds") is not None:
+                if tinfo["min_seconds"] == tinfo["max_seconds"]:
+                    answer = f"This step takes about {fmt(tinfo['min_seconds'])}."
+                else:
+                    answer = f"This step takes about {fmt(tinfo['min_seconds'])}–{fmt(tinfo['max_seconds'])}."
+            elif tinfo.get("duration"):
+                answer = f"This step takes {tinfo['duration']}."
+            elif tinfo.get("qualitative"):
+                answer = " / ".join(tinfo["qualitative"])
+        previous_answer = {"answer": answer, "suggestions": None}
         return previous_answer
+
+    
+    elif question_type in ["temperature"]:
+        step = recipe.current_step
+        tinf = getattr(step, "temperature", None) or {}
+        answer = "This step does not specify a temperature."
+        if tinf:
+            parts = []
+            if tinf.get("oven"):
+                parts.append(f"Oven: {tinf['oven']}")
+            if tinf.get("stovetop"):
+                parts.append(f"Stovetop: {tinf['stovetop']}")
+            if parts:
+                answer = "; ".join(parts)
+            elif tinf.get("mentions"):
+                answer = tinf["mentions"][0].get("qualitative") or tinf["mentions"][0].get("text") or answer
+        previous_answer = {"answer": answer, "suggestions": None}
+        return previous_answer 
 
 
     # Affirmation responses (in response to a yes/no question from the previous bot response)
