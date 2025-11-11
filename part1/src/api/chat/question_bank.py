@@ -10,6 +10,7 @@ DIRECTIONAL_QUESTIONS = {
     "next step": "next_step",
     "happens next": "next_step",
     "what is the next step": "next_step",
+    "what do i do next": "next_step",
 
     # Previous step
     "is previous step": "previous_step",
@@ -21,6 +22,7 @@ DIRECTIONAL_QUESTIONS = {
     "did previously": "previous_step",
     "did before": "previous_step",
     "what is the previous step": "previous_step",
+    "what do i do before": "previous_step",
     
     # Current step
     "step": "current_step",
@@ -29,6 +31,7 @@ DIRECTIONAL_QUESTIONS = {
     "this step": "current_step",
     "happens now": "current_step",
     "do now": "current_step",
+    "what do i do now": "current_step",
 
     # First step
     "first step": "first_step",

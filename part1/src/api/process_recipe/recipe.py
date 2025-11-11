@@ -71,12 +71,16 @@ class Recipe:
     def get_steps(self) -> list[dict]:
         return self.steps
 
-    def step_forward(self) -> RecipeNode:
+    def step_forward(self) -> tuple[RecipeNode, bool]:
+        stepped = False
         if self.current_step.next is not None:
             self.current_step = self.current_step.next
-        return self.current_step
+            stepped = True
+        return self.current_step, stepped
 
-    def step_backward(self) -> RecipeNode:
+    def step_backward(self) -> tuple[RecipeNode, bool]:
+        stepped = False
         if self.current_step.previous is not None:
             self.current_step = self.current_step.previous
-        return self.current_step
+            stepped = True
+        return self.current_step, stepped

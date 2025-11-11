@@ -82,12 +82,15 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
     
     question_type = classify_question(question)
+    print("\t", question_type)
 
     if question_type in ["next_step", "previous_step", "current_step", "first_step"]:
 
         # Set previous question, because the bot's response
         #   asks yes/no question at the end
         previous_question = question_type
+
+        stepped = True
 
         if question_type == "first_step":
             # Avoid updating recipe.first_step so that it remains the same 
@@ -96,9 +99,9 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
         else:
             if question_type == "next_step":
-                curr_step = recipe.step_forward()
+                curr_step, stepped = recipe.step_forward()
             elif question_type == "previous_step":
-                curr_step = recipe.step_backward()
+                curr_step, stepped = recipe.step_backward()
             elif question_type == "current_step":
                 curr_step = recipe.current_step
 
@@ -109,12 +112,19 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             "answer": answer,
             "suggestions": {
                 # visible text, text to put in the input field
-                "What should I do next?": "What do I do next?",
                 "What are the methods?": "What methods are used in this step?",
-                "What ingredients do I need?": "What ingredients do I need in this step?"
+                "What ingredients do I need?": "What ingredients do I need in this step?",
+                "What do I do next?": "What do I do next?"
             }
         }
-        return previous_answer
+
+        if stepped:
+            return previous_answer
+        else:
+            if question_type == "next_step":
+                return "There are no more steps in this recipe."
+            elif question_type == "previous_step":
+                return "There are no previous steps in this recipe."
         
     elif question_type in ["all_ingredients", "step_ingredients"]:
         answer = return_ingredients_response(recipe, question_type)
@@ -122,7 +132,8 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             "answer": answer,
             "suggestions": {
                 "What methods should I use?": "What methods should I use in this step?",
-                "How long will this step take?": "How long will this step take?"
+                "How long will this step take?": "How long will this step take?",
+                "What do I do next?": "What do I do next?",
             }
         }
         return previous_answer
@@ -147,7 +158,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             previous_answer = {
                 "answer": "Alright. What else would you like to know?",
                 "suggestions": {
-                    "What should I do now?": "What should I do now?",
+                    "What do I do now?": "What do I do now?",
                     "Ingredients this step.": "What ingredients do I need this step?"
                 }
             }

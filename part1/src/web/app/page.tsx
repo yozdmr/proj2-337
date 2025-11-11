@@ -45,6 +45,61 @@ export default function Home() {
     }
   }, [urlStatus]);
 
+  async function handleQuestionSubmit(question: string) {
+    setError(null);
+    setSubmitting(true);
+    setMessages((msgs) => [
+      ...msgs,
+      { type: "user", content: question },
+      { type: "bot", content: "Loading" },
+    ]);
+
+    try {
+      const res = await fetch("http://localhost:8080/ask-question", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question }),
+      });
+
+      if (!res.ok) {
+        throw new Error("Question service error");
+      }
+
+      const data = await res.json();
+
+      let reply: string;
+      let suggestions: Record<string, string> | undefined;
+      if (data.answer) {
+        reply = data.answer;
+      } else if (data.message) {
+        reply = data.message;
+      } else {
+        reply = "Sorry, I couldn't process your question.";
+      }
+
+      // Extract suggestions if present (expecting a dictionary/object)
+      if (data.suggestions && typeof data.suggestions === "object" && !Array.isArray(data.suggestions)) {
+        suggestions = data.suggestions;
+      }
+
+      setMessages((msgs) => [
+        ...msgs.slice(0, msgs.length - 1),
+        { type: "bot", content: reply, suggestions },
+      ]);
+    } catch (err: any) {
+      const errorMessage = "Failed to process your question. Please try again.";
+      setMessages((msgs) => [
+        ...msgs.slice(0, msgs.length - 1),
+        { type: "bot", content: errorMessage },
+      ]);
+      setError("Failed to process question.");
+    } finally {
+      setSubmitting(false);
+      // Keep focus on input after submission
+      inputRef.current?.focus();
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -64,12 +119,9 @@ export default function Home() {
       setSubmitting(true);
     } else {
       // Subsequent submissions: questions to ask-question
-      setSubmitting(true);
-      setMessages((msgs) => [
-        ...msgs,
-        { type: "user", content: input },
-        { type: "bot", content: "Loading" },
-      ]);
+      await handleQuestionSubmit(input);
+      setInput("");
+      return;
     }
 
     try {
@@ -110,44 +162,11 @@ export default function Home() {
             setRecipeUrl(data.recipe_url);
           }
           // Add bot message when recipe is successfully processed
-          setMessages([{ type: "bot", content: "Recipe processed! Ask a question" }]);
+          setMessages([{ type: "bot", content: "Hi there, my name is Simon - your AI cooking assistant. Ask me anything you like!" }]);
         } else {
           setUrlStatus("error");
           setError(data.error || "Failed to process recipe");
         }
-      } else {
-        // Subsequent submissions: questions to ask-question
-        res = await fetch("http://localhost:8080/ask-question", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ question: input }),
-        });
-
-        if (!res.ok) {
-          throw new Error("Question service error");
-        }
-
-        data = await res.json();
-
-        let reply: string;
-        let suggestions: Record<string, string> | undefined;
-        if (data.answer) {
-          reply = data.answer;
-        } else if (data.message) {
-          reply = data.message;
-        } else {
-          reply = "Sorry, I couldn't process your question.";
-        }
-
-        // Extract suggestions if present (expecting a dictionary/object)
-        if (data.suggestions && typeof data.suggestions === "object" && !Array.isArray(data.suggestions)) {
-          suggestions = data.suggestions;
-        }
-
-        setMessages((msgs) => [
-          ...msgs.slice(0, msgs.length - 1),
-          { type: "bot", content: reply, suggestions },
-        ]);
       }
 
       setInput("");
@@ -313,10 +332,7 @@ export default function Home() {
                               key={idx}
                               text={text}
                               question={question}
-                              onClick={(question) => {
-                                setInput(question);
-                                inputRef.current?.focus();
-                              }}
+                              onClick={handleQuestionSubmit}
                               darkMode={darkMode}
                             />
                           ))}
@@ -360,20 +376,14 @@ export default function Home() {
             <SuggestionButton
               text="What should I do first?"
               question="What should I do first?"
-              onClick={(question) => {
-                setInput(question);
-                inputRef.current?.focus();
-              }}
+              onClick={handleQuestionSubmit}
               darkMode={darkMode}
               fullWidth={true}
             />
             <SuggestionButton
               text="What ingredients do I need in this recipe?"
               question="What ingredients do I need in this recipe?"
-              onClick={(question) => {
-                setInput(question);
-                inputRef.current?.focus();
-              }}
+              onClick={handleQuestionSubmit}
               darkMode={darkMode}
               fullWidth={true}
             />
