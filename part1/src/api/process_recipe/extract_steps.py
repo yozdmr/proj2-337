@@ -4,6 +4,7 @@ import re as _re
 
 from process_recipe.step_components.extract_tools import extract_tools
 from process_recipe.step_components.extract_methods import extract_methods
+from process_recipe.step_components.extract_time_temp import extract_time_info, extract_temperature_info
 
 
 # Checks whether contains directions text in the tag or a span
