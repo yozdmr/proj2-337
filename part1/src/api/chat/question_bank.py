@@ -95,6 +95,17 @@ TIME_QUESTIONS = {
     "how much time will it take to prepare": "time",
 }
 
+TEMPERATURE_QUESTIONS = {
+    "temperature": "temperature",
+    "what temperature": "temperature",
+    "what temp": "temperature",
+    "oven temp": "temperature",
+    "how hot": "temperature",
+    "what degree": "temperature",
+    "what degrees": "temperature",
+    "bake at what temperature": "temperature",
+}
+
 AFFIRMATIONS = {
     # Positive answers
     "yes": "yes",
