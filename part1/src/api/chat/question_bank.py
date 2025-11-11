@@ -116,6 +116,19 @@ AFFIRMATIONS = {
     "not sure": "no",
     "not sure about that": "no",
     "negative": "no",
+
+    # Repeat answers
+    "repeat": "repeat",
+    "repeat please": "repeat",
+    "repeat that": "repeat",
+    "repeat again": "repeat",
+    "repeat one more time": "repeat",
+    "repeat one more time please": "repeat",
+    "repeat one more time that": "repeat",
+    "repeat one more time again": "repeat",
+    "say again": "repeat",
+    "say it again": "repeat",
+    "What was that again": "repeat"
 }
 
 

@@ -6,7 +6,9 @@ from process_recipe.recipe import Recipe
 
 
 global previous_question
+global previous_answer
 previous_question = None
+previous_answer = None
 
 def classify_question(question: str) -> str:
     # Normalize question: lowercase, remove punctuation, normalize whitespace
@@ -76,6 +78,8 @@ def classify_question(question: str) -> str:
 
 def handle_question(question: str, recipe: Recipe) -> dict:
     global previous_question
+    global previous_answer
+
     
     question_type = classify_question(question)
 
@@ -101,7 +105,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             # Construct response
             answer = f"<h4 class='chat-header'>Step {curr_step.step_number}:</h4><p>{curr_step.description}</p>\n<p>Would you like to know about the ingredients used in this step?</p>"
         
-        return {
+        previous_answer = {
             "answer": answer,
             "suggestions": {
                 # visible text, text to put in the input field
@@ -110,47 +114,52 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "What ingredients do I need?": "What ingredients do I need in this step?"
             }
         }
+        return previous_answer
         
     elif question_type in ["all_ingredients", "step_ingredients"]:
         answer = return_ingredients_response(recipe, question_type)
-        return {
+        previous_answer = {
             "answer": answer,
             "suggestions": {
                 "What methods should I use?": "What methods should I use in this step?",
                 "How long will this step take?": "How long will this step take?"
             }
         }
+        return previous_answer
 
 
     elif question_type in ["time"]:
         # TODO: Flesh out the responses so that they contain relevant information
-        return {
+        previous_answer = {
             "answer": "Time information",
             "suggestions": None
         }
+        return previous_answer
 
 
     # Affirmation responses (in response to a yes/no question from the previous bot response)
     #  As of right now, when asking for STEP information, the bot will ask:
     #    "Would you like to know about the ingredients used in this step?"
     # And this code handles it accordingly
-    elif question_type in ["yes", "no"]:        
+    elif question_type in ["yes", "no", "repeat"]:        
         # If no, await next question from user
         if question_type == "no":
-            return {
+            previous_answer = {
                 "answer": "Alright. What else would you like to know?",
                 "suggestions": {
                     "What should I do now?": "What should I do now?",
                     "Ingredients this step.": "What ingredients do I need this step?"
                 }
             }
+            return previous_answer
 
         # If yes, return appropriate response
         #  GIVEN PREVIOUS QUESTION
         elif question_type == "yes":
             #  If previous question is None there is nothing to respond to
             if previous_question is None:
-                return "I'm sorry, I'm not sure what you're responding to."
+                previous_answer = "I'm sorry, I'm not sure what you're responding to."
+                return previous_answer
 
             # Return appropriate response based on previous question
             if previous_question in ["next_step", "previous_step", "current_step"]:
@@ -161,7 +170,14 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
             # Reset previous question
             previous_question = None
-            return resp
+            previous_answer = {
+                "answer": resp,
+                "suggestions": None
+            }
+            return previous_answer
+        
+        elif question_type == "repeat":
+            return previous_answer
 
 
     else:

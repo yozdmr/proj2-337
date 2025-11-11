@@ -184,7 +184,7 @@ export default function Home() {
       >
         {/* Header */}
         <div className="w-full flex items-center justify-center mb-8 relative">
-          {/* Recipe status circle - left side */}
+          {/* Recipe status icon */}
           {urlStatus === "success" && recipeUrl ? (
             <a
               href={recipeUrl}
