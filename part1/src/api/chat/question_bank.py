@@ -3,6 +3,14 @@
 #  -  is the previous step? ...
 #  -  is the current step? ...
 
+RECIPE_QUESTIONS = {
+    "the whole recipe": "recipe",
+    "the entire recipe": "recipe",
+    "what is the whole recipe": "recipe",
+    "what are all the instructions": "recipe",
+    "display the recipe": "recipe"
+}
+
 DIRECTIONAL_QUESTIONS = {
     # Next step
     "next": "next_step",
@@ -32,12 +40,23 @@ DIRECTIONAL_QUESTIONS = {
     "happens now": "current_step",
     "do now": "current_step",
     "what do i do now": "current_step",
+    "What was that again": "current_step",
 
     # First step
     "first step": "first_step",
     "what do i do first": "first_step",
     "what is the first step": "first_step",
-    "what is the first step in the recipe": "first_step"
+    "what is the first step in the recipe": "first_step",
+
+    # nth step
+    "what is the step": "nth_step",
+    "what is the step in the recipe": "nth_step",
+    "what do i do on the step": "nth_step",
+    "what do i do on the step in the recipe": "nth_step",
+    "what do i do on the step in the instructions": "nth_step",
+    "take me to the step": "nth_step",
+    "take me to the step in the recipe": "nth_step",
+    "take me to the step in the instructions": "nth_step",
 }
 
 # Ingredient questions
@@ -58,6 +77,7 @@ INGREDIENT_QUESTIONS = {
     "ingredients do i need in this recipe": "all_ingredients",
     "ingredients in the instructions": "all_ingredients",
     "all the ingredients": "all_ingredients",
+    "ingredients do i need in whole recipe": "all_ingredients",
 
     # Get ingredients for a specific step
     "this ingredients": "step_ingredients",
@@ -115,10 +135,34 @@ TEMPERATURE_QUESTIONS = {
     "what temperature": "temperature",
     "what temp": "temperature",
     "oven temp": "temperature",
+    "stove heat": "temperature",
+    "stove heat level": "temperature",
+    "oven heat": "temperature",
     "how hot": "temperature",
     "what degree": "temperature",
     "what degrees": "temperature",
     "bake at what temperature": "temperature",
+    "bake at what heat": "temperature",
+    "boil at what heat": "temperature",
+    "boil at what temperature": "temperature",
+    "boil at what heat level": "temperature",
+    "how hot should i cook": "temperature",
+    "how hot should i prepare": "temperature"
+}
+
+# Tool questions
+TOOL_QUESTIONS = {
+    "tools": "step_tools",
+    "what tools should i use": "step_tools",
+    "what tools should I use in this step": "step_tools",
+    "what tools do i need": "step_tools",
+    "what tools are used": "step_tools",
+    "what tools are used in this step": "step_tools",
+    "what tools are used in the instructions": "step_tools",
+
+    "what are all the tools used in this recipe": "all_tools",
+    "what tools are used in this recipe": "all_tools",
+    "what tools should I use in the whole recipe": "all_tools",
 }
 
 AFFIRMATIONS = {
@@ -162,9 +206,11 @@ AFFIRMATIONS = {
 
 # NOTE: Add question banks here
 QUESTION_BANK = [
+    RECIPE_QUESTIONS,
     DIRECTIONAL_QUESTIONS,
     INGREDIENT_QUESTIONS,
     TIME_QUESTIONS,
     TEMPERATURE_QUESTIONS,
+    TOOL_QUESTIONS,
     AFFIRMATIONS
 ]

@@ -1,79 +1,15 @@
-import re
-from chat.question_bank import QUESTION_BANK
+from chat.preprocess_question import extract_step_number, classify_question
+
 from chat.frame_response.frame_ingredients import return_ingredients_response
+from chat.frame_response.frame_full_recipe import return_full_recipe_response
+from chat.frame_response.frame_time import return_time_response
 
 from process_recipe.recipe import Recipe
 
 
 global previous_question
 global previous_answer
-previous_question = None
-previous_answer = None
-
-def classify_question(question: str) -> str:
-    # Normalize question: lowercase, remove punctuation, normalize whitespace
-    question_normalized = question.lower().strip()
-    question_normalized = re.sub(r"[^\w\s]", "", question_normalized)
-    question_normalized = " ".join(question_normalized.split())
-    
-    # Get question words (excluding common stop words for better matching)
-    stop_words = {"a", "an", "the", "is", "are", "what", "which", "when", "where", "who", "why", "yes", "no"}
-    question_words = set(w for w in question_normalized.split() if w not in stop_words)
-    
-    best_match = None
-    best_match_score = 0
-    exact_match_found = False
-    
-    # Check each question bank for matches
-    for bank in QUESTION_BANK:
-        for key_phrase, category in bank.items():
-            # Normalize key phrase the same way
-            key_normalized = key_phrase.lower().strip()
-            key_normalized = re.sub(r"[^\w\s]", "", key_normalized)
-            key_normalized = " ".join(key_normalized.split())
-            
-            # Get key words (excluding stop words)
-            key_words = set(w for w in key_normalized.split() if w not in stop_words)
-            
-            # Step 1: Exact match (highest priority - should win over everything)
-            if key_normalized == question_normalized:
-                exact_match_found = True
-                best_match = category
-                best_match_score = float('inf')  # Highest possible score
-                continue
-            
-            # Step 2: Exact substring match (only if no exact match found yet)
-            if not exact_match_found:
-                if key_normalized in question_normalized or question_normalized in key_normalized:
-                    # For single-word questions, prevent matching against long multi-word keys
-                    # This prevents "step" from matching "ingredients are used in this step"
-                    question_word_count = len(question_words)
-                    key_word_count = len(key_words)
-                    
-                    # Single-word questions should only match single-word or two-word keys
-                    if question_word_count == 1 and key_word_count > 2:
-                        continue
-                    
-                    # Prefer longer matches (more specific)
-                    score = len(key_normalized)
-                    if score > best_match_score:
-                        best_match = category
-                        best_match_score = score
-                # Step 3: Word overlap (makes it more flexible)
-                elif key_words and question_words:
-                    # Calculate overlap: how many key words appear in question
-                    overlap = len(key_words & question_words)
-                    # Score based on overlap ratio (prefer matches with more overlap)
-                    overlap_ratio = overlap / len(key_words)
-                    # Also consider the length of the key (prefer longer, more specific keys)
-                    score = overlap_ratio * len(key_normalized)
-                    
-                    # Require at least 50% word overlap to consider it a match
-                    if overlap_ratio >= 0.5 and score > best_match_score:
-                        best_match = category
-                        best_match_score = score
-    
-    return best_match if best_match else "none"
+previous_question, previous_answer = None, None
 
 
 def handle_question(question: str, recipe: Recipe) -> dict:
@@ -84,29 +20,52 @@ def handle_question(question: str, recipe: Recipe) -> dict:
     question_type = classify_question(question)
     print("\t", question_type)
 
-    if question_type in ["next_step", "previous_step", "current_step", "first_step"]:
+    if question_type in ["recipe"]:
+        previous_answer = {
+            "answer": return_full_recipe_response(recipe),
+            "suggestions": {
+                "What ingredients do I need?": "What ingredients do I need in the whole recipe?",
+                "What tools should I use?": "What tools should I use in the whole recipe?",
+                "What do I do first?": "What do I do first?",
+            }
+        }
 
-        # Set previous question, because the bot's response
-        #   asks yes/no question at the end
-        previous_question = question_type
+        return previous_answer
 
+
+    elif question_type in ["next_step", "previous_step", "current_step", "first_step", "nth_step"]:
+        # Default value
         stepped = True
 
         if question_type == "first_step":
             # Avoid updating recipe.first_step so that it remains the same 
-            first_step = recipe.first_step
-            answer = f"<h4 class='chat-header'>Step {first_step.step_number}:</h4><p>{first_step.description}</p>\n<p>Would you like to know about the ingredients used in this step?</p>"
+            subject_step = recipe.first_step
+            answer = f"<h4 class='chat-header'>Step {subject_step.step_number}:</h4><p>{subject_step.description}</p>"
 
         else:
             if question_type == "next_step":
-                curr_step, stepped = recipe.step_forward()
+                subject_step, stepped = recipe.step_forward()
             elif question_type == "previous_step":
-                curr_step, stepped = recipe.step_backward()
+                subject_step, stepped = recipe.step_backward()
             elif question_type == "current_step":
-                curr_step = recipe.current_step
+                subject_step = recipe.current_step
+            elif question_type == "nth_step":
+
+                step_number = extract_step_number(question)
+                temp_step = recipe.nth_step(step_number)
+
+                if temp_step is not None:
+                    recipe.current_step = temp_step
+                subject_step = recipe.current_step
 
             # Construct response
-            answer = f"<h4 class='chat-header'>Step {curr_step.step_number}:</h4><p>{curr_step.description}</p>\n<p>Would you like to know about the ingredients used in this step?</p>"
+            answer = f"<h4 class='chat-header'>Step {subject_step.step_number}:</h4><p>{subject_step.description}</p>"
+        
+        # NOTE: If this is true, set previous question, because the bot's response
+        #   asks yes/no question at the end
+        if subject_step.ingredients:
+            answer += f"\n<p>Would you like to know about the ingredients used in this step?</p>"
+            previous_question = question_type
         
         previous_answer = {
             "answer": answer,
@@ -137,6 +96,42 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             }
         }
         return previous_answer
+    
+
+    elif question_type in ["step_tools", "all_tools"]:
+        if question_type == "step_tools":
+            if len(recipe.current_step.tools) > 0:
+                tools = ", ".join(recipe.current_step.tools)
+                answer = f"<p>Tools used in this step: {tools}</p>"
+            else:
+                answer = "<p>There are no tools used in this step.</p>"
+            
+            previous_answer = {
+                "answer": answer,
+                "suggestions": {
+                    "What ingredients do I need?": "What ingredients do I need in this step?",
+                    "How long will this step take?": "How long will this step take?",
+                    "What do I do next?": "What do I do next?",
+                }
+            }
+        elif question_type == "all_tools":
+            answer = ""
+            for step in recipe.steps:
+                if len(step["tools"]) > 0:
+                    tools = ", ".join(step["tools"])
+                    answer += f"<p>Tools used in step {step['step_number']}: {tools}</p>"
+                else:
+                    answer += f"<p>There are no tools used in step {step['step_number']}.</p>"
+        
+            previous_answer = {
+                "answer": answer,
+                "suggestions": {
+                    "What ingredients does this recipe need?": "What ingredients for the whole recipe?",
+                    "What do I do next?": "What do I do next?",
+                }
+            }
+        
+        return previous_answer
 
 
     elif question_type in ["how_much_ingredient"]:
@@ -161,28 +156,10 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         # so that we can track the conversation history
 
     elif question_type in ["time"]:
-        step = recipe.current_step
-        tinfo = getattr(step, "time", None) or {}
-        def fmt(sec: int) -> str:
-            m, s = divmod(int(sec), 60)
-            h, m = divmod(m, 60)
-            if h: 
-                return f"{h} hr {m} min" if m else f"{h} hr"
-            if m: 
-                return f"{m} min"
-            return f"{s} sec"
-        answer = "I couldn't find an explicit time for this step."
-        if tinfo:
-            if tinfo.get("min_seconds") is not None and tinfo.get("max_seconds") is not None:
-                if tinfo["min_seconds"] == tinfo["max_seconds"]:
-                    answer = f"This step takes about {fmt(tinfo['min_seconds'])}."
-                else:
-                    answer = f"This step takes about {fmt(tinfo['min_seconds'])}–{fmt(tinfo['max_seconds'])}."
-            elif tinfo.get("duration"):
-                answer = f"This step takes {tinfo['duration']}."
-            elif tinfo.get("qualitative"):
-                answer = " / ".join(tinfo["qualitative"])
-        previous_answer = {"answer": answer, "suggestions": None}
+        previous_answer = {
+            "answer": return_time_response(recipe),
+            "suggestions": None
+        }
         return previous_answer
 
     

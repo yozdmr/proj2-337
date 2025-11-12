@@ -245,7 +245,9 @@ export default function Home() {
           {/* Toggle dark mode */}
           <button
             onClick={() => setDarkMode((dm) => !dm)}
-            className="absolute right-0 transition-colors rounded-full p-2 bg-orange-100 hover:bg-orange-200 dark:bg-zinc-800 dark:hover:bg-orange-600"
+            className={`absolute right-0 transition-colors rounded-full p-2 ${
+              darkMode ? "bg-zinc-800 hover:bg-orange-600" : "bg-orange-100 hover:bg-orange-200"
+            }`}
             type="button"
           >
             {darkMode ? (
@@ -353,7 +355,9 @@ export default function Home() {
         {messages.length > 0 && urlStatus === "success" && (
           <div>
             <div 
-              className="w-2/3 border-t border-zinc-300 dark:border-zinc-700 absolute left-1/2 -translate-x-1/2"
+              className={`w-2/3 border-t absolute left-1/2 -translate-x-1/2 ${
+                darkMode ? "border-zinc-700" : "border-zinc-300"
+              }`}
               style={{
                 bottom: 'calc(8rem + 11px)',
                 transition: 'bottom 500ms ease-in-out, opacity 500ms ease-in-out',
@@ -373,6 +377,13 @@ export default function Home() {
             }}
           >
             <h4 className="text-sm text-zinc-500 text-left ml-2 font-medium italic">Suggestions:</h4>
+            <SuggestionButton
+              text="What's the whole recipe?"
+              question="Display the recipe"
+              onClick={handleQuestionSubmit}
+              darkMode={darkMode}
+              fullWidth={true}
+            />
             <SuggestionButton
               text="What should I do first?"
               question="What should I do first?"

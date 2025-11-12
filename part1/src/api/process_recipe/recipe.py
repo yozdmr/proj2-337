@@ -84,3 +84,11 @@ class Recipe:
             self.current_step = self.current_step.previous
             stepped = True
         return self.current_step, stepped
+    
+    def nth_step(self, step_number: int) -> RecipeNode:
+        current_step = self.first_step
+        for i in range(step_number - 1):
+            if current_step.next is None:
+                return None
+            current_step = current_step.next
+        return current_step
