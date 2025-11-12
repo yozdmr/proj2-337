@@ -20,8 +20,9 @@ def return_ingredients_response(recipe: Recipe, question_type: str="", get_first
     response = f'<h4 class="chat-header">{header}</h4>'
 
     if isinstance(ingredients[0], dict):
+        response += '<ul class="ingredient-list">'
         for ingredient in ingredients:
-            response += f'<ul class="ingredient-list"><li>'
+            response += '<li>'
             if ingredient['descriptor'] is not None:
                 desc_and_name = ingredient['descriptor'] + " " + ingredient['name']
             else:

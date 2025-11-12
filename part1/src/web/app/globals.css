@@ -33,11 +33,14 @@ h4.chat-header {
 }
 
 .ingredient-list {
-  @apply list-disc list-inside pl-0 my-2;
+  @apply list-disc my-2 pl-5;
 }
 
 .ingredient-list li {
-  @apply my-1 pl-3 leading-relaxed;
+  @apply my-1 leading-relaxed;
+  padding-left: 0.25rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 .ingredient-list li span {
