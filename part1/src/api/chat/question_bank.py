@@ -165,6 +165,26 @@ TOOL_QUESTIONS = {
     "what tools should I use in the whole recipe": "all_tools",
 }
 
+DETAILED_CLARIFICATION_QUESTIONS = {
+    "how do i": "clarification_specific",
+    "what is a": "clarification_specific",
+    "what is an": "clarification_specific",
+    "what's an": "clarification_specific",
+    "what's a": "clarification_specific",
+    "what is": "clarification_specific",
+    "what's": "clarification_specific",
+    "what are": "clarification_specific",
+    "what's are": "clarification_specific",
+
+    "how do i do that": "clarification_general",
+    "how do i do this": "clarification_general",
+    "what is that": "clarification_general",
+    "what's that": "clarification_general",
+    "what is this": "clarification_general",
+    "what's this": "clarification_general",
+}
+
+
 AFFIRMATIONS = {
     # Positive answers
     "yes": "yes",
@@ -198,7 +218,17 @@ AFFIRMATIONS = {
     "repeat one more time again": "repeat",
     "say again": "repeat",
     "say it again": "repeat",
-    "What was that again": "repeat"
+    "What was that again": "repeat",
+
+    # Thank you answers
+    "thanks": "thanks",
+    "thank you": "thanks",
+    "thank you very much": "thanks",
+    "thank you so much": "thanks",
+    "thank you for that": "thanks",
+    "thank you for the information": "thanks",
+    "thank you for the help": "thanks",
+    "thank you for the support": "thanks",
 }
 
 
@@ -212,5 +242,6 @@ QUESTION_BANK = [
     TIME_QUESTIONS,
     TEMPERATURE_QUESTIONS,
     TOOL_QUESTIONS,
+    DETAILED_CLARIFICATION_QUESTIONS,
     AFFIRMATIONS
 ]

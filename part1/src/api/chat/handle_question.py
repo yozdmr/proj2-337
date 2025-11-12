@@ -1,4 +1,6 @@
-from chat.preprocess_question import extract_step_number, classify_question
+import requests
+
+from chat.preprocess_question import extract_step_number, extract_clarification_subject, classify_question
 
 from chat.frame_response.frame_ingredients import return_ingredients_response
 from chat.frame_response.frame_full_recipe import return_full_recipe_response
@@ -29,6 +31,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "What do I do first?": "What do I do first?",
             }
         }
+
 
         return previous_answer
 
@@ -181,11 +184,79 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         return previous_answer 
 
 
+    
+
+    elif question_type in ["clarification_specific", "clarification_general"]:
+        # Prepare search URLs for both types
+        question_search_term = question.replace(" ", "+")
+        search_str_google = f"https://www.google.com/search?q={question_search_term}"
+        search_str_youtube = f"https://www.youtube.com/results?search_query={question_search_term}"
+        
+        if question_type == "clarification_specific":
+            # Get recipe tools
+            recipe_tools = []
+            for step in recipe.steps:
+                recipe_tools.extend(step["tools"])
+            
+            clarification_subject, clarification_type = extract_clarification_subject(question, recipe.ingredients, recipe_tools)
+
+            # Get definiton from https://dictionaryapi.dev/
+            if clarification_subject:
+
+                response = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{clarification_subject}")
+                if response.status_code == 200:
+                    definitions = response.json()[0]["meanings"]
+
+                    # Each item in definitions is a dict and has a key "partOfSpeech"
+                    # Find the item with the key "partOfSpeech" that matches the clarification_type if possible
+                    # Else pick the first item
+                    final_definition = None
+                    for definition in definitions:
+                        if definition["partOfSpeech"] == clarification_type:
+                            final_definition = definition["definitions"][0]["definition"]
+                            break
+                    
+                    if final_definition is None:
+                        final_definition = definitions[0]["definitions"][0]["definition"]
+                else:
+                    final_definition = "I wasn't able to find a definition for that myself."
+            else:
+                final_definition = "I'm sorry, I'm not sure what you're referring to."
+        
+        elif question_type == "clarification_general":
+            final_definition = "not done yet..."
+        
+
+        link_buttons = '<div class="mt-4 pt-3 border-t flex flex-row flex-wrap gap-2 border-zinc-300 dark:border-zinc-700">'
+        link_buttons += (
+            f"<a href='{search_str_google}' class='ref-link-button google font-extrabold tracking-tight' target='_blank' rel='noopener noreferrer' style='letter-spacing: 0;'>"
+            f"<span style='color: #2563eb;'>G</span>"
+            f"<span style='color: #dc2626;'>o</span>"
+            f"<span style='color: #fb923c;'>o</span>"
+            f"<span style='color: #2563eb;'>g</span>"
+            f"<span style='color: #16a34a;'>l</span>"
+            f"<span style='color: #dc2626;'>e</span>"
+            f"</a>"
+        )
+        link_buttons += (
+            f"<a href='{search_str_youtube}' class='ref-link-button youtube' target='_blank' rel='noopener noreferrer'>"
+            f"You<span style='background-color: #dc2626;'>Tube</span>"
+            f"</a></div>"
+        )
+
+        final_definition_with_buttons = f"<p>{final_definition}</p>{link_buttons}"
+
+        previous_answer = {
+            "answer": final_definition_with_buttons,
+            "suggestions": None
+        }
+        return previous_answer
+
     # Affirmation responses (in response to a yes/no question from the previous bot response)
     #  As of right now, when asking for STEP information, the bot will ask:
     #    "Would you like to know about the ingredients used in this step?"
     # And this code handles it accordingly
-    elif question_type in ["yes", "no", "repeat"]:        
+    elif question_type in ["yes", "no", "repeat", "thanks"]:        
         # If no, await next question from user
         if question_type == "no":
             previous_answer = {
@@ -221,7 +292,11 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             return previous_answer
         
         elif question_type == "repeat":
+            if previous_answer is None:
+                return "I don't have anything to repeat."
             return previous_answer
+        elif question_type == "thanks":
+            return "You're welcome! What other questions do you have?"
 
 
     else:
