@@ -131,7 +131,13 @@ def classify_question(question: str) -> str:
     question_normalized = " ".join(question_normalized.split())
     
     # Get question words (excluding common stop words for better matching)
-    stop_words = {"a", "an", "the", "is", "are", "what", "which", "when", "where", "who", "why", "yes", "no"}
+    stop_words = {
+        "a", "an", "the", "is", "are",
+        "what", "which", "when", "where", "who", "why",
+        "yes", "no",
+        "do", "does", "did", "should", "could", "would",
+        "use", "used", "using", "need", "needs", "needed",
+    }
     question_words = set(w for w in question_normalized.split() if w not in stop_words)
     
     best_match = None
