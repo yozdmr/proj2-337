@@ -4,6 +4,7 @@
 #  -  is the current step? ...
 
 RECIPE_QUESTIONS = {
+    "whole recipe": "recipe",
     "the whole recipe": "recipe",
     "the entire recipe": "recipe",
     "what is the whole recipe": "recipe",
@@ -165,6 +166,28 @@ TOOL_QUESTIONS = {
     "what tools should I use in the whole recipe": "all_tools",
 }
 
+# Method Questions
+METHOD_QUESTIONS = {
+    "methods": "step_methods",
+    "what methods step": "step_methods",
+    "what methods this step": "step_methods",
+    "what methods should i use": "step_methods",
+    "what methods should I use in this step": "step_methods",
+    "what methods are used": "step_methods",
+    "what methods are used in this step": "step_methods",
+    "how do i do this step": "step_methods",
+    "what actions should i take in this step": "step_methods",
+    "what actions": "step_methods",
+
+    "what all methods": "all_methods",
+    "what methods whole recipe": "all_methods",
+    "what are all the methods used in this recipe": "all_methods",
+    "what methods are used in the whole recipe": "all_methods",
+    "what methods should I use in the whole recipe": "all_methods",
+    "how do i do the whole recipe": "all_methods",
+    "what actions should i take in this recipe": "all_methods",
+}
+
 DETAILED_CLARIFICATION_QUESTIONS = {
     "how do i": "clarification_specific",
     "what is a": "clarification_specific",
@@ -242,6 +265,7 @@ QUESTION_BANK = [
     TIME_QUESTIONS,
     TEMPERATURE_QUESTIONS,
     TOOL_QUESTIONS,
+    METHOD_QUESTIONS,
     DETAILED_CLARIFICATION_QUESTIONS,
     AFFIRMATIONS
 ]

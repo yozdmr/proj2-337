@@ -6,6 +6,7 @@ from chat.frame_response.frame_ingredients import return_ingredients_response
 from chat.frame_response.frame_full_recipe import return_full_recipe_response
 from chat.frame_response.frame_time import return_time_response
 from chat.frame_response.frame_clarifications import return_specific_clarification_response
+from chat.frame_response.frame_methods import return_methods_response, return_all_methods_response
 
 from process_recipe.recipe import Recipe
 
@@ -16,7 +17,6 @@ previous_question, previous_answer = None, None
 
 
 def reset_conversation_state():
-    """Reset the conversation state to default values."""
     global previous_question
     global previous_answer
     previous_question = None
@@ -93,9 +93,9 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             return previous_answer
         else:
             if question_type == "next_step":
-                return "There are no more steps in this recipe."
+                return "Congratulations! You've completed the recipe."
             elif question_type == "previous_step":
-                return "There are no previous steps in this recipe."
+                return "You're at the beginning of the recipe. Onwards!"
         
     elif question_type in ["all_ingredients", "step_ingredients"]:
         answer = return_ingredients_response(recipe, question_type)
@@ -143,6 +143,17 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 }
             }
         
+        return previous_answer
+    
+    elif question_type in ["step_methods", "all_methods"]:
+        if question_type == "step_methods":
+            answer = return_methods_response(recipe)
+        elif question_type == "all_methods":
+            answer = return_all_methods_response(recipe)
+        previous_answer = {
+            "answer": answer,
+            "suggestions": None
+        }
         return previous_answer
 
 

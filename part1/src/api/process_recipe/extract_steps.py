@@ -7,6 +7,18 @@ from process_recipe.step_components.extract_methods import extract_methods
 from process_recipe.step_components.extract_time_temp import extract_time_info, extract_temperature_info
 
 
+# Split text into sentences based on sentence-ending punctuation.
+def _split_into_sentences(text: str) -> list[str]:
+    # Split on sentence-ending punctuation followed by whitespace or end of string
+    # Pattern: . ! or ? followed by whitespace or end of string
+    sentences = _re.split(r'(?<=[.!?])(?:\s+|$)', text)
+    
+    # Filter out empty strings and strip whitespace
+    result = [s.strip() for s in sentences if s.strip()]
+    
+    return result
+
+
 # Checks whether contains directions text in the tag or a span
 def _contains_directions_text(tag: Tag) -> bool:
     text = tag.get_text(strip=True).lower()
@@ -54,18 +66,44 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
     if not header:
         return []
 
-
-    # Find Ordered List of Steps in identified header
-    steps_list: Optional[Tag] = header.find_next("ol")
-    if not steps_list:
-        return []   
+    # Get all text content from the directions section
+    # Collect text from all siblings after the header until we hit another header or end
+    directions_text_parts = []
+    current = header.next_sibling
+    
+    while current:
+        if isinstance(current, Tag):
+            # Stop if we hit another header
+            if current.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+                break
+            # Get text from this element
+            text = current.get_text(separator=" ", strip=True)
+            if text:
+                directions_text_parts.append(text)
+        elif isinstance(current, str):
+            # Handle text nodes directly
+            text = current.strip()
+            if text:
+                directions_text_parts.append(text)
+        current = current.next_sibling
+    
+    # Combine all text parts
+    directions_text = " ".join(directions_text_parts)
+    
+    if not directions_text.strip():
+        return []
+    
+    # Split into sentences
+    sentences = _split_into_sentences(directions_text)
+    
+    if not sentences:
+        return []
     
     context={}
 
-    # Loop through steps in ordered list
+    # Loop through each sentence as a step
     steps: list[dict] = []
-    for idx, step in enumerate(steps_list.find_all("li"), start=1):
-        description = step.get_text(strip=True)
+    for idx, description in enumerate(sentences, start=1):
 
         step_ingredients = []
         for ingredient in ingredients:
