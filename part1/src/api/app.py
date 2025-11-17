@@ -9,7 +9,7 @@ from flask_cors import CORS
 from process_recipe.extract_ingredients import extract_ingredients
 from process_recipe.extract_steps import extract_steps
 from process_recipe.recipe import Recipe
-from chat.handle_question import handle_question
+from chat.handle_question import handle_question, reset_conversation_state
 
 app = Flask(__name__)
 CORS(app)
@@ -112,6 +112,19 @@ def ask_question():
         if result.get("suggestions"):
             response["suggestions"] = result["suggestions"]
         return jsonify(response), 200
+
+
+@app.post("/reset")
+def reset():
+    global recipe
+    
+    # Reset the global recipe to None
+    recipe = None
+    
+    # Reset conversation state in handle_question module
+    reset_conversation_state()
+    
+    return jsonify({"status": "reset"}), 200
 
 
 if __name__ == "__main__":

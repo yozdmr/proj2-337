@@ -113,7 +113,7 @@ def extract_clarification_subject(question: str, ingredients: list[dict], tools:
                     return subject, "noun"
             
             # If no exact match, return the extracted subject anyway
-            return subject
+            return subject, None
     
     # If no pattern matched, return the original question (or empty string)
     return None, None
@@ -132,6 +132,7 @@ def classify_question(question: str) -> str:
     best_match = None
     best_match_score = 0
     exact_match_found = False
+    substring_match_found = False
     
     # Check each question bank for matches
     for bank in QUESTION_BANK:
@@ -152,8 +153,12 @@ def classify_question(question: str) -> str:
                 continue
             
             # Step 2: Exact substring match (only if no exact match found yet)
+            # Prioritize prefix matches (question starts with key) over general substring matches
             if not exact_match_found:
-                if key_normalized in question_normalized or question_normalized in key_normalized:
+                is_prefix_match = question_normalized.startswith(key_normalized + " ")
+                is_substring_match = key_normalized in question_normalized or question_normalized in key_normalized
+                
+                if is_prefix_match or is_substring_match:
                     # For single-word questions, prevent matching against long multi-word keys
                     # This prevents "step" from matching "ingredients are used in this step"
                     question_word_count = len(question_words)
@@ -163,13 +168,16 @@ def classify_question(question: str) -> str:
                     if question_word_count == 1 and key_word_count > 2:
                         continue
                     
-                    # Prefer longer matches (more specific)
-                    score = len(key_normalized)
+                    # Prefer prefix matches and longer matches (more specific)
+                    # Prefix matches get a bonus to ensure they win over word overlap
+                    prefix_bonus = 1000 if is_prefix_match else 0
+                    score = prefix_bonus + len(key_normalized)
                     if score > best_match_score:
+                        substring_match_found = True
                         best_match = category
                         best_match_score = score
-                # Step 3: Word overlap (makes it more flexible)
-                elif key_words and question_words:
+                # Step 3: Word overlap (only if no substring match found yet)
+                elif not substring_match_found and key_words and question_words:
                     # Calculate overlap: how many key words appear in question
                     overlap = len(key_words & question_words)
                     # Score based on overlap ratio (prefer matches with more overlap)

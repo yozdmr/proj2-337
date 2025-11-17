@@ -5,6 +5,7 @@ from chat.preprocess_question import extract_step_number, extract_clarification_
 from chat.frame_response.frame_ingredients import return_ingredients_response
 from chat.frame_response.frame_full_recipe import return_full_recipe_response
 from chat.frame_response.frame_time import return_time_response
+from chat.frame_response.frame_clarifications import return_specific_clarification_response
 
 from process_recipe.recipe import Recipe
 
@@ -12,6 +13,14 @@ from process_recipe.recipe import Recipe
 global previous_question
 global previous_answer
 previous_question, previous_answer = None, None
+
+
+def reset_conversation_state():
+    """Reset the conversation state to default values."""
+    global previous_question
+    global previous_answer
+    previous_question = None
+    previous_answer = None
 
 
 def handle_question(question: str, recipe: Recipe) -> dict:
@@ -193,43 +202,14 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         search_str_youtube = f"https://www.youtube.com/results?search_query={question_search_term}"
         
         if question_type == "clarification_specific":
-            # Get recipe tools
-            recipe_tools = []
-            for step in recipe.steps:
-                recipe_tools.extend(step["tools"])
-            
-            clarification_subject, clarification_type = extract_clarification_subject(question, recipe.ingredients, recipe_tools)
-
-            # Get definiton from https://dictionaryapi.dev/
-            if clarification_subject:
-
-                response = requests.get(f"https://api.dictionaryapi.dev/api/v2/entries/en/{clarification_subject}")
-                if response.status_code == 200:
-                    definitions = response.json()[0]["meanings"]
-
-                    # Each item in definitions is a dict and has a key "partOfSpeech"
-                    # Find the item with the key "partOfSpeech" that matches the clarification_type if possible
-                    # Else pick the first item
-                    final_definition = None
-                    for definition in definitions:
-                        if definition["partOfSpeech"] == clarification_type:
-                            final_definition = definition["definitions"][0]["definition"]
-                            break
-                    
-                    if final_definition is None:
-                        final_definition = definitions[0]["definitions"][0]["definition"]
-                else:
-                    final_definition = "I wasn't able to find a definition for that myself."
-            else:
-                final_definition = "I'm sorry, I'm not sure what you're referring to."
-        
+            final_definition = return_specific_clarification_response(recipe, question)
         elif question_type == "clarification_general":
             final_definition = "not done yet..."
         
 
-        link_buttons = '<div class="mt-4 pt-3 border-t flex flex-row flex-wrap gap-2 border-zinc-300 dark:border-zinc-700">'
+        link_buttons = '<div class="mt-4 pt-3 border-t flex flex-row flex-wrap gap-4 border-zinc-300 dark:border-zinc-700">'
         link_buttons += (
-            f"<a href='{search_str_google}' class='ref-link-button google font-extrabold tracking-tight' target='_blank' rel='noopener noreferrer' style='letter-spacing: 0;'>"
+            f"<a href='{search_str_google}' class='ref-link-button google font-extrabold flex gap-0' target='_blank' rel='noopener noreferrer' style='letter-spacing: 0;'>"
             f"<span style='color: #2563eb;'>G</span>"
             f"<span style='color: #dc2626;'>o</span>"
             f"<span style='color: #fb923c;'>o</span>"
@@ -240,7 +220,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         )
         link_buttons += (
             f"<a href='{search_str_youtube}' class='ref-link-button youtube' target='_blank' rel='noopener noreferrer'>"
-            f"You<span style='background-color: #dc2626;'>Tube</span>"
+            f"You<span>Tube</span>"
             f"</a></div>"
         )
 

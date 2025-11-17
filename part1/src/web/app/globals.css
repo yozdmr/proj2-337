@@ -25,18 +25,39 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
+
 /* Custom link buttons */
 .ref-link-button {
-  @apply inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm text-left font-bold bg-white;
+  @apply inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm text-left font-bold bg-white border-zinc-300 transition-colors;
 }
 
 .ref-link-button.google {
-  @apply border-blue-500;
+  @apply pl-3 pr-4;
 }
 
 .ref-link-button.youtube {
+  @apply px-2;
+}
+.ref-link-button.google:hover {
+  @apply border-blue-500;
+}
+
+.ref-link-button.youtube:hover {
   @apply border-red-500;
 }
+
+.google span {
+  margin-right: -6px;
+}
+
+.youtube span {
+  margin-left: -6px;
+  background-color: #dc2626;
+  padding: 1 4px;
+  border-radius: 6px;
+  color: white;
+}
+
 
 
 /* Custom CSS classes for chat output */

@@ -100,6 +100,43 @@ export default function Home() {
     }
   }
 
+  async function handleReset() {
+    try {
+      // Call the reset endpoint
+      await fetch("http://localhost:8080/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      // Reset all UI state to default
+      setInput("");
+      setSubmitting(false);
+      setError(null);
+      setMessages([]);
+      setSubmittedUrl(null);
+      setUrlStatus(null);
+      setRecipeName(null);
+      setRecipeUrl(null);
+      setShowFadeIn(false);
+      
+      // Focus on input after reset
+      inputRef.current?.focus();
+    } catch (err: any) {
+      console.error("Failed to reset:", err);
+      // Still reset UI state even if API call fails
+      setInput("");
+      setSubmitting(false);
+      setError(null);
+      setMessages([]);
+      setSubmittedUrl(null);
+      setUrlStatus(null);
+      setRecipeName(null);
+      setRecipeUrl(null);
+      setShowFadeIn(false);
+      inputRef.current?.focus();
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -420,9 +457,35 @@ export default function Home() {
             </div>
           )}
           <div className="relative">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={submitting || submittedUrl === null || urlStatus !== "success"}
+              className="group absolute left-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-orange-500 disabled:hover:ring-0"
+              title="Reset"
+            >
+              {/* https://icons.getbootstrap.com/icons/arrow-counterclockwise/ */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+                className={`transition-colors ${
+                  submitting || submittedUrl === null || urlStatus !== "success"
+                    ? "text-zinc-400"
+                    : darkMode
+                    ? "text-white group-hover:text-orange-500"
+                    : "text-black group-hover:text-orange-500"
+                }`}
+              >
+                <path fillRule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z" stroke="currentColor" strokeWidth="0.5"/>
+                <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466" stroke="currentColor" strokeWidth="0.5"/>
+              </svg>
+            </button>
             <input
               ref={inputRef}
-              className={`w-full rounded-xl border pr-12 px-4 py-3 outline-none transition-colors text-base placeholder-zinc-400 shadow-sm
+              className={`w-full rounded-xl border pr-12 pl-12 px-4 py-3 outline-none transition-colors text-base placeholder-zinc-400 shadow-sm
                 ${
                   darkMode
                     ? "bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-orange-400"
