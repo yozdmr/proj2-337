@@ -1,4 +1,5 @@
 import requests
+import re
 
 from chat.preprocess_question import extract_step_number, extract_clarification_subject, classify_question
 
@@ -24,6 +25,141 @@ def reset_conversation_state():
     previous_question = None
     previous_answer = None
 
+# helper functions for ingredient-based questions
+_INGREDIENT_STOPWORDS = {
+    "a", "an", "the", "of", "to", "for", "with",
+    "how", "much", "many", "do", "does", "did",
+    "i", "you", "we", "they", "he", "she", "it",
+    "need", "needs", "needed", "use", "used", "using",
+    "should", "this", "that", "step", "recipe",
+    "instead", "can", "could",
+}
+
+
+def _normalize_text_for_match(text: str) -> str:
+    """Lowercase, keep only letters and spaces, collapse whitespace."""
+    text = re.sub(r"[^a-zA-Z\\s]", " ", text.lower())
+    return " ".join(text.split())
+
+
+def _get_ingredient_list(recipe):
+    """Get the list of ingredient dicts from the Recipe object or dict."""
+    if recipe is None:
+        return []
+    # recipe class
+    if hasattr(recipe, "get_ingredients"):
+        try:
+            ing = recipe.get_ingredients()
+            if ing:
+                return list(ing)
+        except Exception:
+            pass
+    # fallback attributes
+    if hasattr(recipe, "ingredients"):
+        ing = getattr(recipe, "ingredients")
+        if ing:
+            return list(ing)
+    # Dict-style
+    if isinstance(recipe, dict):
+        ing = recipe.get("ingredients")
+        if ing:
+            return list(ing)
+    return []
+
+
+def _best_match_ingredient_from_question(question: str, recipe):
+    """Heuristically find the ingredient mentioned in the question."""
+    ingredients = _get_ingredient_list(recipe)
+    if not ingredients:
+        return None
+
+    q_norm = _normalize_text_for_match(question)
+    if not q_norm:
+        return None
+
+    q_tokens = [
+        t for t in q_norm.split()
+        if t and t not in _INGREDIENT_STOPWORDS
+    ]
+    if not q_tokens:
+        # Fall back to using all tokens
+        q_tokens = q_norm.split()
+    q_token_set = set(q_tokens)
+
+    best = None
+    best_score = 0.0
+
+    for ing in ingredients:
+        # ingredient can be a dict or a simple string
+        if isinstance(ing, dict):
+            name = str(ing.get("name") or ing.get("ingredient") or ing.get("ingredient_name") or "")
+        else:
+            name = str(ing)
+        name_norm = _normalize_text_for_match(name)
+        if not name_norm:
+            continue
+        name_tokens = name_norm.split()
+        name_token_set = set(name_tokens)
+        if not name_token_set:
+            continue
+
+        overlap = len(q_token_set & name_token_set)
+        overlap_ratio = overlap / len(name_token_set)
+
+        substring_bonus = 0.0
+        if name_norm in q_norm:
+            substring_bonus = 0.5
+
+        score = overlap_ratio + substring_bonus
+        if score > best_score:
+            best_score = score
+            best = ing
+            
+    if best_score == 0.0:
+        return None
+    return best
+
+
+_SUBSTITUTIONS = {
+    "butter": [
+        "margarine (1:1)",
+        "olive oil (about 3/4 as much as butter)",
+        "coconut oil (1:1 in many baking recipes)",
+    ],
+    "milk": [
+        "unsweetened almond milk (1:1)",
+        "soy milk (1:1)",
+        "oat milk (1:1)",
+    ],
+    "egg": [
+        "1 tbsp ground flaxseed + 3 tbsp water (per egg)",
+        "1/4 cup unsweetened applesauce (for baking)",
+    ],
+    "sour cream": [
+        "plain Greek yogurt (1:1)",
+        "plain yogurt (1:1)",
+    ],
+    "sugar": [
+        "honey (use about 3/4 cup honey for 1 cup sugar and reduce other liquids)",
+        "maple syrup (3/4 cup for 1 cup sugar)",
+    ],
+}
+
+
+def _canonical_substitution_key(name: str) -> str:
+    """Map a raw ingredient name to a canonical key in _SUBSTITUTIONS."""
+    norm = _normalize_text_for_match(name)
+    if "butter" in norm:
+        return "butter"
+    if "milk" in norm:
+        return "milk"
+    if "egg" in norm or "eggs" in norm:
+        return "egg"
+    if "sour cream" in norm or ("cream" in norm and "sour" in norm):
+        return "sour cream"
+    if "sugar" in norm:
+        return "sugar"
+    return norm
 
 def handle_question(question: str, recipe: Recipe) -> dict:
     global previous_question
@@ -200,25 +336,89 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
 
     elif question_type in ["how_much_ingredient"]:
-        # TODO Xinhe implement this
+        ing = _best_match_ingredient_from_question(question, recipe)
 
-        # The 'recipe' is passed to this function
-        # Do 'recipe.ingredients' to get the dictionary of ingredients
-        #  Each ingredient is a dictionary with the following keys:
-        # "name"
-        # "quantity"
-        # "measurement"
-        # "descriptor"
-        # "preparation"
+        if ing is None:
+            answer_text = (
+                "I'm not sure which ingredient you're asking about. "
+                "Try asking something like 'How much salt do I need?'."
+            )
+        else:
+            name = str(ing.get("name") or "").strip()
+            quantity = str(ing.get("quantity") or "").strip()
+            measurement = str(ing.get("measurement") or "").strip()
+            descriptor = str(ing.get("descriptor") or "").strip()
 
+            display_name_parts = [p for p in [descriptor, name] if p]
+            display_name = " ".join(display_name_parts) if display_name_parts else "this ingredient"
 
+            if quantity or measurement:
+                amount = " ".join(p for p in [quantity, measurement] if p)
+                answer_text = f"You need {amount} of {display_name}."
+            else:
+                prep = ing.get("preparation")
+                if prep:
+                    answer_text = (
+                        f"The recipe does not specify an exact amount for {display_name}, "
+                        f"but it says: {prep}."
+                    )
+                else:
+                    answer_text = f"The recipe does not specify an exact amount for {display_name}."
 
-        return "HOW MUCH!!!!"
+        previous_answer = {
+            "answer": f"<p>{answer_text}</p>",
+            "suggestions": {
+                "What can I use instead?": "What can I use instead of butter?",
+                "What do I do next?": "What do I do next?",
+            },
+        }
+        return previous_answer
 
+    elif question_type in ["replacement_ingredient"]:
+        # Ingredient substitution, e.g. "What can I use instead of butter?"
+        ing = _best_match_ingredient_from_question(question, recipe)
+        raw_name = ""
+        if ing is not None:
+            raw_name = str(ing.get("name") or "").strip()
 
+        if not raw_name:
+            q_lower = question.lower()
+            m = re.search(r"(?:instead of|substitute for|in place of)\\s+([a-zA-Z\\s]+)", q_lower)
+            if m:
+                raw_name = m.group(1).strip()
 
-        # NOTE: Store your answer in previous_answer then return it
-        # so that we can track the conversation history
+        if not raw_name:
+            answer = (
+                "I'm not sure which ingredient you want to replace. "
+                "Try asking 'What can I use instead of butter?'."
+            )
+        else:
+            key = _canonical_substitution_key(raw_name)
+            options = _SUBSTITUTIONS.get(key)
+
+            if options:
+                items_html = "".join(f"<li>{opt}</li>" for opt in options)
+                answer = (
+                    f"Here are some common substitutes for {key}:"
+                    f"<ul>{items_html}</ul>"
+                )
+            else:
+                q_param = f"substitute for {raw_name}".replace(" ", "+")
+                url = f"https://www.google.com/search?q={q_param}"
+                answer = (
+                    f"I'm not sure about good substitutes for {raw_name}. "
+                    f"You can check some ideas here: "
+                    f"<a href='{url}' target='_blank' rel='noopener noreferrer'>{url}</a>"
+                )
+
+        previous_answer = {
+            "answer": answer,
+            "suggestions": {
+                "How much do I need?": "How much salt do I need?",
+                "What do I do next?": "What do I do next?",
+            },
+        }
+        return previous_answer
 
     elif question_type in ["time"]:
         previous_answer = {
