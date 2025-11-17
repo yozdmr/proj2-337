@@ -66,44 +66,83 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
     if not header:
         return []
 
-    # Get all text content from the directions section
-    # Collect text from all siblings after the header until we hit another header or end
-    directions_text_parts = []
-    current = header.next_sibling
+    # Try to find an ordered or unordered list in the directions section
+    # First, find the parent section or container
+    section = header.find_parent("section")
+    if not section:
+        # If no section, try to find a parent div or the header's parent
+        section = header.find_parent(["div", "section"])
     
-    while current:
-        if isinstance(current, Tag):
-            # Stop if we hit another header
-            if current.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
-                break
-            # Get text from this element
-            text = current.get_text(separator=" ", strip=True)
+    # Look for an <ol> or <ul> list in the section or after the header
+    step_list: Optional[Tag] = None
+    if section:
+        step_list = section.find("ol") or section.find("ul")
+    
+    # If no list found in section, try searching from header's next siblings
+    if not step_list:
+        current = header.next_sibling
+        while current:
+            if isinstance(current, Tag):
+                if current.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+                    break
+                step_list = current.find("ol") or current.find("ul")
+                if step_list:
+                    break
+            current = current.next_sibling
+    
+    # If we found a list, extract steps from list items
+    if step_list:
+        list_items = step_list.find_all("li", recursive=False)
+        step_descriptions = []
+        for li in list_items:
+            # Get text from <p> tags first, or fall back to all text
+            p_tag = li.find("p")
+            if p_tag:
+                text = p_tag.get_text(separator=" ", strip=True)
+            else:
+                text = li.get_text(separator=" ", strip=True)
             if text:
-                directions_text_parts.append(text)
-        elif isinstance(current, str):
-            # Handle text nodes directly
-            text = current.strip()
-            if text:
-                directions_text_parts.append(text)
-        current = current.next_sibling
+                # Split the text into sentences and add each as a separate step
+                sentences = _split_into_sentences(text)
+                step_descriptions.extend(sentences)
+    else:
+        # Fall back to original approach: collect text from siblings
+        directions_text_parts = []
+        current = header.next_sibling
+        
+        while current:
+            if isinstance(current, Tag):
+                # Stop if we hit another header
+                if current.name in ("h1", "h2", "h3", "h4", "h5", "h6"):
+                    break
+                # Get text from this element
+                text = current.get_text(separator=" ", strip=True)
+                if text:
+                    directions_text_parts.append(text)
+            elif isinstance(current, str):
+                # Handle text nodes directly
+                text = current.strip()
+                if text:
+                    directions_text_parts.append(text)
+            current = current.next_sibling
+        
+        # Combine all text parts
+        directions_text = " ".join(directions_text_parts)
+        
+        if not directions_text.strip():
+            return []
+        
+        # Split into sentences
+        step_descriptions = _split_into_sentences(directions_text)
     
-    # Combine all text parts
-    directions_text = " ".join(directions_text_parts)
-    
-    if not directions_text.strip():
-        return []
-    
-    # Split into sentences
-    sentences = _split_into_sentences(directions_text)
-    
-    if not sentences:
+    if not step_descriptions:
         return []
     
     context={}
 
-    # Loop through each sentence as a step
+    # Loop through each step description
     steps: list[dict] = []
-    for idx, description in enumerate(sentences, start=1):
+    for idx, description in enumerate(step_descriptions, start=1):
 
         step_ingredients = []
         for ingredient in ingredients:
