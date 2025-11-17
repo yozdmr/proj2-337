@@ -3,6 +3,38 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  
+  /* Orange color palette */
+  --orange-100: #ffedd5;
+  --orange-200: #fed7aa;
+  --orange-400: #fb923c;
+  --orange-500: #f97316;
+  --orange-600: #ea580c;
+  
+  /* Light mode colors */
+  --light-bg-primary: #ffffff;
+  --light-bg-secondary: #f4f4f5;
+  --light-bg-tertiary: #e4e4e7;
+  --light-text-primary: #000000;
+  --light-text-secondary: #18181b;
+  --light-text-tertiary: #71717a;
+  --light-border: #d4d4d8;
+  
+  /* Dark mode colors */
+  --dark-bg-primary: #000000;
+  --dark-bg-secondary: #18181b;
+  --dark-bg-tertiary: #27272a;
+  --dark-text-primary: #ffffff;
+  --dark-text-secondary: #f4f4f5;
+  --dark-text-tertiary: #a1a1aa;
+  --dark-border: #3f3f46;
+  
+  /* Status colors */
+  --status-success: #4ade80;
+  --status-success-hover: #22c55e;
+  --status-error: #f87171;
+  --status-warning: #fb923c;
+  --status-neutral: #9ca3af;
 }
 
 @theme inline {
@@ -26,24 +58,276 @@ body {
 }
 
 
+/* Custom link buttons */
+.ref-link-button {
+  @apply inline-flex items-center gap-2 rounded-xl border px-4 py-2 text-sm text-left font-bold bg-white border-zinc-300 transition-colors;
+}
+
+.ref-link-button.google {
+  @apply pl-3 pr-4;
+}
+
+.ref-link-button.youtube {
+  @apply px-2;
+}
+.ref-link-button.google:hover {
+  @apply border-blue-500;
+}
+
+.ref-link-button.youtube:hover {
+  @apply border-red-500;
+}
+
+.google span {
+  margin-right: -6px;
+}
+
+.youtube span {
+  margin-left: -6px;
+  background-color: #dc2626;
+  padding: 1 4px;
+  border-radius: 6px;
+  color: white;
+}
+
+
 
 /* Custom CSS classes for chat output */
 h4.chat-header {
   @apply font-bold text-lg mb-2;
 }
 
+.recipe-list {
+  @apply list-decimal my-2 pl-5;
+}
+
 .ingredient-list {
   @apply list-disc my-2 pl-5;
 }
 
-.ingredient-list li {
+.ingredient-list li, .recipe-list li {
   @apply my-1 leading-relaxed;
   padding-left: 0.25rem;
   word-wrap: break-word;
   overflow-wrap: break-word;
 }
 
-.ingredient-list li span {
+.ingredient-list li span, .recipe-list li span {
   @apply text-sm italic opacity-80;
 }
 
+/* !!!! Global UI Component Classes !!!! */
+
+/* Chat bubbles */
+.chat-bubble-user {
+  @apply px-4 py-3 rounded-xl rounded-br-none max-w-full whitespace-pre-line transition-colors text-white;
+}
+
+.chat-bubble-user.light {
+  background-color: var(--orange-400);
+}
+
+.chat-bubble-user.dark {
+  background-color: var(--orange-600);
+}
+
+.chat-bubble-bot {
+  @apply px-4 py-3 rounded-xl rounded-bl-none max-w-full whitespace-pre-line transition-colors;
+}
+
+.chat-bubble-bot.light {
+  @apply bg-zinc-200 text-black;
+}
+
+.chat-bubble-bot.dark {
+  @apply bg-zinc-800 text-zinc-100;
+}
+
+/* Input fields */
+.input-field {
+  @apply w-full rounded-xl border pr-12 pl-12 px-4 py-3 outline-none transition-colors text-base placeholder-zinc-400 shadow-sm;
+}
+
+.input-field.light {
+  @apply bg-zinc-100 border-zinc-300 text-zinc-900;
+}
+
+.input-field.light:focus {
+  @apply border-orange-500;
+}
+
+.input-field.dark {
+  @apply bg-zinc-800 border-zinc-700 text-zinc-100;
+}
+
+.input-field.dark:focus {
+  @apply border-orange-400;
+}
+
+/* Icon buttons */
+.icon-button {
+  @apply p-2 rounded-full transition-all;
+}
+
+.icon-button:hover {
+  @apply ring-2 ring-orange-500;
+}
+
+.icon-button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.icon-button:disabled:hover {
+  @apply ring-0;
+}
+
+.icon-button.light {
+  @apply text-black;
+}
+
+.icon-button.light:hover {
+  @apply text-orange-500;
+}
+
+.icon-button.dark {
+  @apply text-white;
+}
+
+.icon-button.dark:hover {
+  @apply text-orange-500;
+}
+
+.icon-button.disabled {
+  @apply text-zinc-400;
+}
+
+/* Status indicators */
+.status-indicator {
+  @apply absolute left-0 transition-colors rounded-full p-2;
+}
+
+.status-indicator.success {
+  @apply bg-green-400 hover:bg-green-300;
+}
+
+.status-indicator.loading {
+  background-color: var(--status-warning);
+}
+
+.status-indicator.error {
+  @apply bg-red-400;
+}
+
+.status-indicator.neutral {
+  @apply bg-gray-400;
+}
+
+/* Dividers */
+.divider {
+  @apply w-full border-t;
+}
+
+.divider.light {
+  @apply border-zinc-300;
+}
+
+.divider.dark {
+  @apply border-zinc-700;
+}
+
+.divider-thin {
+  @apply border-t;
+}
+
+.divider-thin.light {
+  @apply border-zinc-300;
+}
+
+.divider-thin.dark {
+  @apply border-zinc-700;
+}
+
+/* Suggestion buttons */
+.suggestion-button {
+  @apply rounded-xl border px-4 py-2 text-sm text-left transition-colors hover:border-orange-500;
+}
+
+.suggestion-button.light {
+  @apply bg-zinc-100 border-zinc-300 text-zinc-900 hover:bg-zinc-200;
+}
+
+.suggestion-button.dark {
+  @apply bg-zinc-800 border-zinc-700 text-zinc-100 hover:bg-zinc-700;
+}
+
+.suggestion-button.full-width {
+  @apply w-full;
+}
+
+/* Dark mode toggle button */
+.dark-mode-toggle {
+  @apply absolute right-0 transition-colors rounded-full p-2;
+}
+
+.dark-mode-toggle.light {
+  @apply bg-orange-100 hover:bg-orange-200;
+}
+
+.dark-mode-toggle.dark {
+  @apply bg-zinc-800 hover:bg-orange-600;
+}
+
+/* Container backgrounds */
+.container-bg {
+  @apply transition-colors duration-200;
+}
+
+.container-bg.light {
+  @apply bg-zinc-100;
+}
+
+.container-bg.dark {
+  @apply bg-black;
+}
+
+.main-content {
+  @apply transition duration-200;
+}
+
+.main-content.light {
+  @apply bg-white;
+}
+
+.main-content.dark {
+  @apply bg-zinc-900;
+}
+
+/* Text colors */
+.text-primary {
+  @apply transition-colors;
+}
+
+.text-primary.light {
+  @apply text-black;
+}
+
+.text-primary.dark {
+  @apply text-white;
+}
+
+.text-secondary {
+  @apply transition-colors;
+}
+
+.text-secondary.light {
+  @apply text-zinc-500;
+}
+
+.text-secondary.dark {
+  @apply text-zinc-400;
+}
+
+/* Brand badge */
+.brand-badge {
+  @apply bg-orange-500 text-white px-2 py-1 rounded;
+}

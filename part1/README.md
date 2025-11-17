@@ -13,19 +13,9 @@ Simple one-page web app built using NextJS. It will send calls to the backend Fl
 
 ### Setup Instructions
 
-#### 1. Install Node.js Version
+Manually install Node.js v23.11.0 from [nodejs.org](https://nodejs.org/).
 
-If you're using `nvm`:
-
-```bash
-cd part1/src/web
-nvm install
-nvm use
-```
-
-Or manually install Node.js v23.11.0 from [nodejs.org](https://nodejs.org/).
-
-#### 2. Install Dependencies
+#### 1. Install Dependencies
 
 ```bash
 npm install
@@ -33,7 +23,7 @@ npm install
 
 This will install all dependencies specified in `package.json` and `package-lock.json`.
 
-#### 3. Run Development Server
+#### 2. Run Development Server
 
 ```bash
 npm run dev

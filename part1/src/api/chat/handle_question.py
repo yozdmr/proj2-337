@@ -1,8 +1,12 @@
-from chat.preprocess_question import extract_step_number, classify_question
+import requests
+
+from chat.preprocess_question import extract_step_number, extract_clarification_subject, classify_question
 
 from chat.frame_response.frame_ingredients import return_ingredients_response
 from chat.frame_response.frame_full_recipe import return_full_recipe_response
 from chat.frame_response.frame_time import return_time_response
+from chat.frame_response.frame_clarifications import return_specific_clarification_response
+from chat.frame_response.frame_methods import return_methods_response, return_all_methods_response
 from chat.frame_response.frame_methods import return_methods_response
 
 
@@ -12,6 +16,13 @@ from process_recipe.recipe import Recipe
 global previous_question
 global previous_answer
 previous_question, previous_answer = None, None
+
+
+def reset_conversation_state():
+    global previous_question
+    global previous_answer
+    previous_question = None
+    previous_answer = None
 
 
 def handle_question(question: str, recipe: Recipe) -> dict:
@@ -31,6 +42,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "What do I do first?": "What do I do first?",
             }
         }
+
 
         return previous_answer
 
@@ -83,9 +95,9 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             return previous_answer
         else:
             if question_type == "next_step":
-                return "There are no more steps in this recipe."
+                return "Congratulations! You've completed the recipe."
             elif question_type == "previous_step":
-                return "There are no previous steps in this recipe."
+                return "You're at the beginning of the recipe. Onwards!"
 
 
     elif question_type in ["step_methods", "all_methods"]:
@@ -174,6 +186,17 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             }
         
         return previous_answer
+    
+    elif question_type in ["step_methods", "all_methods"]:
+        if question_type == "step_methods":
+            answer = return_methods_response(recipe)
+        elif question_type == "all_methods":
+            answer = return_all_methods_response(recipe)
+        previous_answer = {
+            "answer": answer,
+            "suggestions": None
+        }
+        return previous_answer
 
 
     elif question_type in ["how_much_ingredient"]:
@@ -223,11 +246,50 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         return previous_answer 
 
 
+    
+
+    elif question_type in ["clarification_specific", "clarification_general"]:
+        # Prepare search URLs for both types
+        question_search_term = question.replace(" ", "+")
+        search_str_google = f"https://www.google.com/search?q={question_search_term}"
+        search_str_youtube = f"https://www.youtube.com/results?search_query={question_search_term}"
+        
+        if question_type == "clarification_specific":
+            final_definition = return_specific_clarification_response(recipe, question)
+        elif question_type == "clarification_general":
+            final_definition = "not done yet..."
+        
+
+        link_buttons = '<div class="mt-4 pt-3 border-t flex flex-row flex-wrap gap-4 border-zinc-300 dark:border-zinc-700">'
+        link_buttons += (
+            f"<a href='{search_str_google}' class='ref-link-button google font-extrabold flex gap-0' target='_blank' rel='noopener noreferrer' style='letter-spacing: 0;'>"
+            f"<span style='color: #2563eb;'>G</span>"
+            f"<span style='color: #dc2626;'>o</span>"
+            f"<span style='color: #fb923c;'>o</span>"
+            f"<span style='color: #2563eb;'>g</span>"
+            f"<span style='color: #16a34a;'>l</span>"
+            f"<span style='color: #dc2626;'>e</span>"
+            f"</a>"
+        )
+        link_buttons += (
+            f"<a href='{search_str_youtube}' class='ref-link-button youtube' target='_blank' rel='noopener noreferrer'>"
+            f"You<span>Tube</span>"
+            f"</a></div>"
+        )
+
+        final_definition_with_buttons = f"<p>{final_definition}</p>{link_buttons}"
+
+        previous_answer = {
+            "answer": final_definition_with_buttons,
+            "suggestions": None
+        }
+        return previous_answer
+
     # Affirmation responses (in response to a yes/no question from the previous bot response)
     #  As of right now, when asking for STEP information, the bot will ask:
     #    "Would you like to know about the ingredients used in this step?"
     # And this code handles it accordingly
-    elif question_type in ["yes", "no", "repeat"]:        
+    elif question_type in ["yes", "no", "repeat", "thanks"]:        
         # If no, await next question from user
         if question_type == "no":
             previous_answer = {
@@ -263,7 +325,11 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             return previous_answer
         
         elif question_type == "repeat":
+            if previous_answer is None:
+                return "I don't have anything to repeat."
             return previous_answer
+        elif question_type == "thanks":
+            return "You're welcome! What other questions do you have?"
 
 
     else:

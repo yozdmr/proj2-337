@@ -1,6 +1,9 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
 import SuggestionButton from "./components/SuggestionButton";
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+import ChatWindow from "./components/ChatWindow";
 
 function isValidUrl(urlStr: string) {
   try {
@@ -25,13 +28,7 @@ export default function Home() {
   const [recipeName, setRecipeName] = useState<string | null>(null);
   const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
   const [showFadeIn, setShowFadeIn] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
-
-  // Auto-scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
 
   // Trigger fade-in after input box transition completes (500ms)
   useEffect(() => {
@@ -96,6 +93,43 @@ export default function Home() {
     } finally {
       setSubmitting(false);
       // Keep focus on input after submission
+      inputRef.current?.focus();
+    }
+  }
+
+  async function handleReset() {
+    try {
+      // Call the reset endpoint
+      await fetch("http://localhost:8080/reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      
+      // Reset all UI state to default
+      setInput("");
+      setSubmitting(false);
+      setError(null);
+      setMessages([]);
+      setSubmittedUrl(null);
+      setUrlStatus(null);
+      setRecipeName(null);
+      setRecipeUrl(null);
+      setShowFadeIn(false);
+      
+      // Focus on input after reset
+      inputRef.current?.focus();
+    } catch (err: any) {
+      console.error("Failed to reset:", err);
+      // Still reset UI state even if API call fails
+      setInput("");
+      setSubmitting(false);
+      setError(null);
+      setMessages([]);
+      setSubmittedUrl(null);
+      setUrlStatus(null);
+      setRecipeName(null);
+      setRecipeUrl(null);
+      setShowFadeIn(false);
       inputRef.current?.focus();
     }
   }
@@ -191,172 +225,25 @@ export default function Home() {
   }
 
   return (
-    <div
-      className={`flex min-h-screen justify-center transition-colors duration-200 ${
-        darkMode ? "bg-black" : "bg-zinc-100"
-      }`}
-    >
-      <main
-        className={`flex h-screen w-3/5 flex-col items-center relative px-4 py-12 transition duration-200 ${
-          darkMode ? "bg-zinc-900" : "bg-white"
-        }`}
-      >
-        {/* Header */}
-        <div className="w-full flex items-center justify-center mb-8 relative">
-          {/* Recipe status icon */}
-          {urlStatus === "success" && recipeUrl ? (
-            <a
-              href={recipeUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="absolute left-0 transition-colors rounded-full p-2 hover:bg-green-300 bg-green-400"
-            >
-              {/* Journal icon - https://icons.getbootstrap.com/icons/journal-bookmark/ */}
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="white" className="bi bi-journal-bookmark" viewBox="0 0 16 16">
-                <path fillRule="evenodd" d="M6 8V1h1v6.117L8.743 6.07a.5.5 0 0 1 .514 0L11 7.117V1h1v7a.5.5 0 0 1-.757.429L9 7.083 6.757 8.43A.5.5 0 0 1 6 8"/>
-                <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2"/>
-                <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/>
-              </svg>
-            </a>
-          ) : (
-            <div
-              className={`absolute left-0 transition-colors rounded-full p-2 ${
-                urlStatus === "loading"
-                  ? "bg-orange-400"
-                  : urlStatus === "error"
-                  ? "bg-red-400"
-                  : "bg-gray-400"
-              }`}
-            >
-              {/* Journal icon - https://icons.getbootstrap.com/icons/journal-bookmark/ */}
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="white" className="bi bi-journal-bookmark" viewBox="0 0 16 16">
-                <path fillRule="evenodd" d="M6 8V1h1v6.117L8.743 6.07a.5.5 0 0 1 .514 0L11 7.117V1h1v7a.5.5 0 0 1-.757.429L9 7.083 6.757 8.43A.5.5 0 0 1 6 8"/>
-                <path d="M3 0h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2v-1h1v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1v1H1V2a2 2 0 0 1 2-2"/>
-                <path d="M1 5v-.5a.5.5 0 0 1 1 0V5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0V8h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1zm0 3v-.5a.5.5 0 0 1 1 0v.5h.5a.5.5 0 0 1 0 1h-2a.5.5 0 0 1 0-1z"/>
-              </svg>
-            </div>
-          )}
-          <h1 className={`text-center text-4xl font-bold tracking-tight ${darkMode ? "text-white" : "text-black"}`}>
-            Welcome to{" "}
-            <span className="bg-orange-500 text-white px-2 py-1 rounded">
-              CookBaum
-            </span>
-          </h1>
-          {/* Toggle dark mode */}
-          <button
-            onClick={() => setDarkMode((dm) => !dm)}
-            className={`absolute right-0 transition-colors rounded-full p-2 ${
-              darkMode ? "bg-zinc-800 hover:bg-orange-600" : "bg-orange-100 hover:bg-orange-200"
-            }`}
-            type="button"
-          >
-            {darkMode ? (
-              // Sun icon
-              // https://icons.getbootstrap.com/icons/sun-fill/
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#FB923C" className="bi bi-sun-fill" viewBox="0 0 16 16">
-                <path d="M8 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8M8 0a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 0m0 13a.5.5 0 0 1 .5.5v2a.5.5 0 0 1-1 0v-2A.5.5 0 0 1 8 13m8-5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2a.5.5 0 0 1 .5.5M3 8a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1 0-1h2A.5.5 0 0 1 3 8m10.657-5.657a.5.5 0 0 1 0 .707l-1.414 1.415a.5.5 0 1 1-.707-.708l1.414-1.414a.5.5 0 0 1 .707 0m-9.193 9.193a.5.5 0 0 1 0 .707L3.05 13.657a.5.5 0 0 1-.707-.707l1.414-1.414a.5.5 0 0 1 .707 0m9.193 2.121a.5.5 0 0 1-.707 0l-1.414-1.414a.5.5 0 0 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .707M4.464 4.465a.5.5 0 0 1-.707 0L2.343 3.05a.5.5 0 1 1 .707-.707l1.414 1.414a.5.5 0 0 1 0 .708"/>
-              </svg>
-            ) : (
-              // Moon icon
-              // https://icons.getbootstrap.com/icons/moon-fill/
-              <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="#FB923C" className="bi bi-moon-fill" viewBox="0 0 16 16">
-                <path d="M6 .278a.77.77 0 0 1 .08.858 7.2 7.2 0 0 0-.878 3.46c0 4.021 3.278 7.277 7.318 7.277q.792-.001 1.533-.16a.79.79 0 0 1 .81.316.73.73 0 0 1-.031.893A8.35 8.35 0 0 1 8.344 16C3.734 16 0 12.286 0 7.71 0 4.266 2.114 1.312 5.124.06A.75.75 0 0 1 6 .278"/>
-              </svg>
-            )}
-          </button>
-        </div>
-        {/* Divider between header and chat history */}
-        <div className={`w-full border-t mb-4 ${darkMode ? "border-zinc-700" : "border-zinc-300"}`}></div>
-        {/* Chat history */}
-        <section className={`w-full flex-1 overflow-y-scroll px-4 ${messages.length > 0 ? "mb-14" : ""}`}>
-          <div className="flex flex-col gap-4">
-            {messages.length > 0 && messages.map((msg, i) => {
-              const bgColor = msg.type === "user"
-                ? darkMode ? "rgb(234, 88, 12)" : "rgb(251, 146, 60)" // orange-600 : orange-400
-                : darkMode ? "rgb(39, 39, 42)" : "rgb(228, 228, 231)"; // zinc-800 : zinc-200
-              
-              return (
-              <div key={i} className="relative" style={{ alignSelf: msg.type === "user" ? "flex-end" : "flex-start" }}>
-                <div
-                  className={`px-4 py-3 rounded-xl ${
-                    msg.type === "user"
-                      ? "rounded-br-none"
-                      : "rounded-bl-none"
-                  } max-w-full whitespace-pre-line transition-colors ${
-                    msg.type === "user"
-                      ? darkMode
-                        ? "bg-orange-600 text-white"
-                        : "bg-orange-400 text-white"
-                      : darkMode
-                      ? "bg-zinc-800 text-zinc-100"
-                      : "bg-zinc-200 text-black"
-                  }`}
-                >
-                  {msg.type === "bot" && msg.content === "Loading" ? (
-                    <div className="flex items-center gap-2">
-                      <span>Loading</span>
-                      <svg
-                        className="animate-spin h-4 w-4"
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                      >
-                        <circle
-                          className="opacity-25"
-                          cx="12"
-                          cy="12"
-                          r="10"
-                          stroke="currentColor"
-                          strokeWidth="4"
-                        ></circle>
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        ></path>
-                      </svg>
-                    </div>
-                  ) : msg.type === "bot" ? (
-                    <>
-                      <span
-                        dangerouslySetInnerHTML={{
-                          __html: msg.content
-                            .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-                            .replace(/\n/g, "<br/>"),
-                        }}
-                      />
-                      {msg.suggestions && Object.keys(msg.suggestions).length > 0 && (
-                        <div className={`mt-4 pt-3 border-t flex flex-row flex-wrap gap-2 ${
-                          darkMode ? "border-zinc-700" : "border-zinc-300"
-                        }`}>
-                          {Object.entries(msg.suggestions).map(([text, question], idx) => (
-                            <SuggestionButton
-                              key={idx}
-                              text={text}
-                              question={question}
-                              onClick={handleQuestionSubmit}
-                              darkMode={darkMode}
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    msg.content
-                  )}
-                </div>
-              </div>
-            );
-            })}
-            <div ref={messagesEndRef} />
-          </div>
-        </section>
+    <div className={`flex min-h-screen justify-center container-bg ${darkMode ? "dark" : "light"}`}>
+      <main className={`flex h-screen w-3/5 flex-col items-center relative px-4 py-12 main-content ${darkMode ? "dark" : "light"}`}>
+        <Header 
+          darkMode={darkMode}
+          setDarkMode={setDarkMode}
+          urlStatus={urlStatus}
+          recipeUrl={recipeUrl}
+        />
+        <ChatWindow 
+          messages={messages}
+          darkMode={darkMode}
+          onQuestionSubmit={handleQuestionSubmit}
+        />
         {/* Divider above text input box */}
         {messages.length > 0 && urlStatus === "success" && (
           <div>
             <div 
-              className={`w-2/3 border-t absolute left-1/2 -translate-x-1/2 ${
-                darkMode ? "border-zinc-700" : "border-zinc-300"
+              className={`w-2/3 divider-thin absolute left-1/2 -translate-x-1/2 ${
+                darkMode ? "dark" : "light"
               }`}
               style={{
                 bottom: 'calc(8rem + 11px)',
@@ -376,7 +263,7 @@ export default function Home() {
               opacity: showFadeIn ? 1 : 0
             }}
           >
-            <h4 className="text-sm text-zinc-500 text-left ml-2 font-medium italic">Suggestions:</h4>
+            <h4 className={`text-sm text-secondary text-left ml-2 font-medium italic ${darkMode ? "dark" : "light"}`}>Suggestions:</h4>
             <SuggestionButton
               text="What's the whole recipe?"
               question="Display the recipe"
@@ -415,20 +302,39 @@ export default function Home() {
           autoComplete="off"
         >
           {urlStatus !== "success" && (
-            <div className="text-zinc-500 text-center italic text-lg mb-4">
+            <div className={`text-secondary text-center italic text-lg mb-4 ${darkMode ? "dark" : "light"}`}>
               Get started...
             </div>
           )}
           <div className="relative">
+            <button
+              type="button"
+              onClick={handleReset}
+              disabled={submitting || submittedUrl === null || urlStatus !== "success"}
+              className={`icon-button absolute left-2 top-1/2 -translate-y-1/2 ${
+                submitting || submittedUrl === null || urlStatus !== "success"
+                  ? "disabled"
+                  : darkMode
+                  ? "dark"
+                  : "light"
+              }`}
+              title="Reset"
+            >
+              {/* https://icons.getbootstrap.com/icons/arrow-counterclockwise/ */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="24"
+                height="24"
+                fill="currentColor"
+                viewBox="0 0 16 16"
+              >
+                <path fillRule="evenodd" d="M8 3a5 5 0 1 1-4.546 2.914.5.5 0 0 0-.908-.417A6 6 0 1 0 8 2z" stroke="currentColor" strokeWidth="0.5"/>
+                <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466" stroke="currentColor" strokeWidth="0.5"/>
+              </svg>
+            </button>
             <input
               ref={inputRef}
-              className={`w-full rounded-xl border pr-12 px-4 py-3 outline-none transition-colors text-base placeholder-zinc-400 shadow-sm
-                ${
-                  darkMode
-                    ? "bg-zinc-800 border-zinc-700 text-zinc-100 focus:border-orange-400"
-                    : "bg-zinc-100 border-zinc-300 text-zinc-900 focus:border-orange-500"
-                }
-              `}
+              className={`input-field ${darkMode ? "dark" : "light"}`}
               type={urlStatus === "success" ? "text" : "url"}
               required
               pattern={urlStatus === "success" ? undefined : "https?://.+"}
@@ -441,7 +347,7 @@ export default function Home() {
             <button
               type="submit"
               disabled={submitting || !input.trim()}
-              className="absolute right-2 top-1/2 -translate-y-1/2 p-2 rounded-full transition-all disabled:opacity-50 disabled:cursor-not-allowed hover:ring-2 hover:ring-orange-500 disabled:hover:ring-0"
+              className={`icon-button absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? "dark" : "light"}`}
             >
               {/* https://icons.getbootstrap.com/icons/arrow-right-short/ */}
               <svg
@@ -449,7 +355,6 @@ export default function Home() {
                 width="24"
                 height="24"
                 fill="currentColor"
-                className={`bi bi-arrow-right-short ${darkMode ? "text-zinc-100" : "text-zinc-900"}`}
                 viewBox="0 0 16 16"
               >
                 <path fillRule="evenodd" d="M4 8a.5.5 0 0 1 .5-.5h5.793L8.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8"/>
@@ -461,18 +366,11 @@ export default function Home() {
         {error && urlStatus === "error" && (
           <p className="text-sm text-red-500 text-center mt-2">{error}</p>
         )}
-        {/* Footer */}
-        {urlStatus === "success" && (
-          <footer 
-            className="mt-4 text-sm text-zinc-400 text-center"
-            style={{
-              opacity: showFadeIn ? 1 : 0,
-              transition: 'opacity 500ms ease-in-out'
-            }}
-          >
-            API: <span className="font-mono">localhost:8080/ask-question</span>
-          </footer>
-        )}
+        <Footer 
+          darkMode={darkMode}
+          showFadeIn={showFadeIn}
+          urlStatus={urlStatus}
+        />
       </main>
     </div>
   );
