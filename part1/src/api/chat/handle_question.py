@@ -3,6 +3,8 @@ from chat.preprocess_question import extract_step_number, classify_question
 from chat.frame_response.frame_ingredients import return_ingredients_response
 from chat.frame_response.frame_full_recipe import return_full_recipe_response
 from chat.frame_response.frame_time import return_time_response
+from chat.frame_response.frame_methods import return_methods_response
+
 
 from process_recipe.recipe import Recipe
 
@@ -84,6 +86,46 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 return "There are no more steps in this recipe."
             elif question_type == "previous_step":
                 return "There are no previous steps in this recipe."
+
+
+    elif question_type in ["step_methods", "all_methods"]:
+        if question_type == "step_methods":
+            methods = getattr(recipe.current_step, "methods", [])
+            if methods:
+                methods_str = ", ".join(methods)
+                answer = f"<p>Methods used in this step: {methods_str}</p>"
+            else:
+                answer = "<p>There are no methods for this step.</p>"
+
+            previous_answer = {
+                "answer": answer,
+                "suggestions": {
+                    "What ingredients do I need?": "What ingredients do I need in this step?",
+                    "What tools should I use?": "What tools should I use in this step?",
+                    "What do I do next?": "What do I do next?",
+                }
+            }
+
+        elif question_type == "all_methods":
+            answer = ""
+            for step in recipe.steps:
+                methods = step.get("methods", [])
+                if methods:
+                    methods_str = ", ".join(methods)
+                    answer += f"<p>Methods used in step {step['step_number']}: {methods_str}</p>"
+                else:
+                    answer += f"<p>There are no methods in step {step['step_number']}.</p>"
+            
+            previous_answer = {
+                "answer": answer,
+                "suggestions": {
+                    "What ingredients are in this recipe?": "What ingredients does this recipe have?",
+                    "What tools do I need?": "What tools do I need for this recipe?",
+                    "What do I do next?": "What do I do next?",
+                }
+            }
+
+        return previous_answer
         
     elif question_type in ["all_ingredients", "step_ingredients"]:
         answer = return_ingredients_response(recipe, question_type)

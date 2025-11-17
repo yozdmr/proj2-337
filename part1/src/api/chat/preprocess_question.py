@@ -57,6 +57,11 @@ def extract_step_number(question: str) -> int:
 
 def classify_question(question: str) -> str:
     # Normalize question: lowercase, remove punctuation, normalize whitespace
+    if "method" in question.lower() or "methods" in question.lower() or "technique" in question.lower():
+        if "step" in question.lower():
+            return "step_methods"
+        else:
+            return "all_methods"
     question_normalized = question.lower().strip()
     question_normalized = re.sub(r"[^\w\s]", "", question_normalized)
     question_normalized = " ".join(question_normalized.split())

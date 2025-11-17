@@ -8,6 +8,7 @@ from flask_cors import CORS
 
 from process_recipe.extract_ingredients import extract_ingredients
 from process_recipe.extract_steps import extract_steps
+from process_recipe.step_components.extract_methods import extract_methods
 from process_recipe.recipe import Recipe
 from chat.handle_question import handle_question
 
@@ -92,6 +93,17 @@ def get_steps():
     if recipe.get_steps() is None:
         return jsonify({"error": "No steps saved"}), 404
     return jsonify({"steps": recipe.get_steps()}), 200
+
+@app.get("/get-methods")
+def get_methods():
+    global recipe
+    if not recipe or not recipe.get_steps():
+        return jsonify({"error": "No recipe loaded"}), 404
+
+    all_methods = []
+    for step in recipe.get_steps():
+        all_methods.extend(extract_methods(step["description"]))
+    return jsonify({"methods": sorted(set(all_methods))}), 200
 
 
 @app.post("/ask-question")
