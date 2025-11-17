@@ -9,6 +9,7 @@ from chat.frame_response.frame_time import return_time_response
 from chat.frame_response.frame_clarifications import return_specific_clarification_response
 from chat.frame_response.frame_methods import return_methods_response, return_all_methods_response
 from chat.frame_response.frame_methods import return_methods_response
+from chat.frame_response.frame_ingredient_substitution import return_ingredient_substitution_response
 
 
 from process_recipe.recipe import Recipe
@@ -120,46 +121,6 @@ def _best_match_ingredient_from_question(question: str, recipe):
     return best
 
 
-_SUBSTITUTIONS = {
-    "butter": [
-        "margarine (1:1)",
-        "olive oil (about 3/4 as much as butter)",
-        "coconut oil (1:1 in many baking recipes)",
-    ],
-    "milk": [
-        "unsweetened almond milk (1:1)",
-        "soy milk (1:1)",
-        "oat milk (1:1)",
-    ],
-    "egg": [
-        "1 tbsp ground flaxseed + 3 tbsp water (per egg)",
-        "1/4 cup unsweetened applesauce (for baking)",
-    ],
-    "sour cream": [
-        "plain Greek yogurt (1:1)",
-        "plain yogurt (1:1)",
-    ],
-    "sugar": [
-        "honey (use about 3/4 cup honey for 1 cup sugar and reduce other liquids)",
-        "maple syrup (3/4 cup for 1 cup sugar)",
-    ],
-}
-
-
-def _canonical_substitution_key(name: str) -> str:
-    """Map a raw ingredient name to a canonical key in _SUBSTITUTIONS."""
-    norm = _normalize_text_for_match(name)
-    if "butter" in norm:
-        return "butter"
-    if "milk" in norm:
-        return "milk"
-    if "egg" in norm or "eggs" in norm:
-        return "egg"
-    if "sour cream" in norm or ("cream" in norm and "sour" in norm):
-        return "sour cream"
-    if "sugar" in norm:
-        return "sugar"
-    return norm
 
 def handle_question(question: str, recipe: Recipe) -> dict:
     global previous_question
@@ -368,7 +329,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         previous_answer = {
             "answer": f"<p>{answer_text}</p>",
             "suggestions": {
-                "What can I use instead?": "What can I use instead of butter?",
+                "What can I use instead?": f"What can I use instead of {ing['name']}?",
                 "What do I do next?": "What do I do next?",
             },
         }
@@ -376,45 +337,12 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
     elif question_type in ["replacement_ingredient"]:
         # Ingredient substitution, e.g. "What can I use instead of butter?"
-        ing = _best_match_ingredient_from_question(question, recipe)
-        raw_name = ""
-        if ing is not None:
-            raw_name = str(ing.get("name") or "").strip()
-
-        if not raw_name:
-            q_lower = question.lower()
-            m = re.search(r"(?:instead of|substitute for|in place of)\\s+([a-zA-Z\\s]+)", q_lower)
-            if m:
-                raw_name = m.group(1).strip()
-
-        if not raw_name:
-            answer = (
-                "I'm not sure which ingredient you want to replace. "
-                "Try asking 'What can I use instead of butter?'."
-            )
-        else:
-            key = _canonical_substitution_key(raw_name)
-            options = _SUBSTITUTIONS.get(key)
-
-            if options:
-                items_html = "".join(f"<li>{opt}</li>" for opt in options)
-                answer = (
-                    f"Here are some common substitutes for {key}:"
-                    f"<ul>{items_html}</ul>"
-                )
-            else:
-                q_param = f"substitute for {raw_name}".replace(" ", "+")
-                url = f"https://www.google.com/search?q={q_param}"
-                answer = (
-                    f"I'm not sure about good substitutes for {raw_name}. "
-                    f"You can check some ideas here: "
-                    f"<a href='{url}' target='_blank' rel='noopener noreferrer'>{url}</a>"
-                )
+        answer, ingr = return_ingredient_substitution_response(recipe, question)
 
         previous_answer = {
             "answer": answer,
             "suggestions": {
-                "How much do I need?": "How much salt do I need?",
+                "How much do I need?": f"How much {ingr} do I need?",
                 "What do I do next?": "What do I do next?",
             },
         }

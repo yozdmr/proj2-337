@@ -143,6 +143,22 @@ h4.chat-header {
   @apply bg-zinc-800 text-zinc-100;
 }
 
+/* Links inside chat bubbles */
+.chat-bubble-bot span.hyperlink {
+  @apply underline;
+  color: #0099cc;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.chat-bubble-bot span.hyperlink:hover {
+  color: #0052a4;
+}
+
+.chat-bubble-bot span svg {
+  @apply ml-1;
+}
+
 /* Input fields */
 .input-field {
   @apply w-full rounded-xl border pr-12 pl-12 px-4 py-3 outline-none transition-colors text-base placeholder-zinc-400 shadow-sm;
