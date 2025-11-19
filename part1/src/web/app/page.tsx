@@ -4,6 +4,7 @@ import SuggestionButton from "./components/SuggestionButton";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ChatWindow from "./components/ChatWindow";
+import SpeechToTextButton from "./components/SpeechToTextButton";
 
 function isValidUrl(urlStr: string) {
   try {
@@ -131,6 +132,33 @@ export default function Home() {
       setRecipeUrl(null);
       setShowFadeIn(false);
       inputRef.current?.focus();
+    }
+  }
+
+  async function handleSpeechTranscript(transcript: string) {
+    if (!transcript.trim()) {
+      return;
+    }
+
+    const trimmedTranscript = transcript.trim();
+    setInput(trimmedTranscript);
+
+    // Automatically submit the transcribed text
+    // If we're in question mode (recipe already loaded), submit as question
+    if (urlStatus === "success") {
+      await handleQuestionSubmit(trimmedTranscript);
+      setInput("");
+    } else {
+      // For URL input mode, validate and submit if it's a valid URL
+      if (isValidUrl(trimmedTranscript)) {
+        // Trigger form submission by calling handleSubmit
+        const form = inputRef.current?.closest("form");
+        if (form) {
+          const submitEvent = new Event("submit", { bubbles: true, cancelable: true });
+          form.dispatchEvent(submitEvent);
+        }
+      }
+      // If not a valid URL, just leave it in the input for user to review
     }
   }
 
@@ -334,7 +362,7 @@ export default function Home() {
             </button>
             <input
               ref={inputRef}
-              className={`input-field ${darkMode ? "dark" : "light"}`}
+              className={`input-field ${darkMode ? "dark" : "light"} ${urlStatus === "success" ? "pr-28" : "pr-12"}`}
               type={urlStatus === "success" ? "text" : "url"}
               required
               pattern={urlStatus === "success" ? undefined : "https?://.+"}
@@ -343,6 +371,11 @@ export default function Home() {
               placeholder={urlStatus === "success" ? "Ask a question about the recipe..." : "Paste a recipe URL (e.g. https://...)"}
               value={input}
               onChange={(e) => setInput(e.target.value)}
+            />
+            <SpeechToTextButton
+              onTranscript={handleSpeechTranscript}
+              darkMode={darkMode}
+              disabled={submitting || urlStatus !== "success"}
             />
             <button
               type="submit"

@@ -130,7 +130,7 @@ export default function TextToSpeechButton({ text, darkMode }: TextToSpeechButto
       }`}>
         <button
           onClick={handleToggleSpeech}
-          className={`icon-button stt ${darkMode ? "dark" : "light"}`}
+          className={`icon-button tts ${darkMode ? "dark" : "light"}`}
           title={isPaused ? "Resume" : isPlaying ? "Pause" : "Play"}
           aria-label={isPaused ? "Resume speech" : isPlaying ? "Pause speech" : "Play speech"}
         >
@@ -174,7 +174,7 @@ export default function TextToSpeechButton({ text, darkMode }: TextToSpeechButto
         <button
           onClick={handleStop}
           disabled={!isPlaying}
-          className={`icon-button stt-stop ${darkMode ? "dark" : "light"} ${!isPlaying ? "disabled" : ""}`}
+          className={`icon-button tts-stop ${darkMode ? "dark" : "light"} ${!isPlaying ? "disabled" : ""}`}
           title="Stop"
           aria-label="Stop speech"
         >

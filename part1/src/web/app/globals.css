@@ -197,15 +197,15 @@ h4.chat-header {
   @apply ring-0;
 }
 
-.icon-button.stt:hover {
+.icon-button.tts:hover {
   @apply text-zinc-500 ring-0;
 }
 
-.icon-button.stt-stop:not(:disabled) {
+.icon-button.tts-stop:not(:disabled) {
   @apply text-red-600;
 }
 
-.icon-button.stt-stop:not(:disabled):hover {
+.icon-button.tts-stop:not(:disabled):hover {
   @apply text-red-400 ring-0;
 }
 
