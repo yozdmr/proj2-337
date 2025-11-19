@@ -47,6 +47,7 @@ DIRECTIONAL_QUESTIONS = {
     "first step": "first_step",
     "what do i do first": "first_step",
     "what is the first step": "first_step",
+    "what's the first step": "first_step",
     "what is the first step in the recipe": "first_step",
 
     # nth step

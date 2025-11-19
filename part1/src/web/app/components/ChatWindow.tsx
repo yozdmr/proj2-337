@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useEffect } from "react";
 import SuggestionButton from "./SuggestionButton";
+import TextToSpeechButton from "./TextToSpeechButton";
 
 interface Message {
   type: "user" | "bot";
@@ -68,19 +69,57 @@ export default function ChatWindow({ messages, darkMode, onQuestionSubmit }: Cha
                           .replace(/\n/g, "<br/>"),
                       }}
                     />
+                    <TextToSpeechButton text={msg.content} darkMode={darkMode} />
                     {msg.suggestions && Object.keys(msg.suggestions).length > 0 && (
                       <div className={`mt-4 pt-3 divider-thin flex flex-row flex-wrap gap-2 ${
                         darkMode ? "dark" : "light"
                       }`}>
-                        {Object.entries(msg.suggestions).map(([text, question], idx) => (
-                          <SuggestionButton
-                            key={idx}
-                            text={text}
-                            question={question}
-                            onClick={onQuestionSubmit}
-                            darkMode={darkMode}
-                          />
-                        ))}
+                        {Object.entries(msg.suggestions).map(([text, question], idx) => {
+                          // Check if this is a Google or YouTube link
+                          const isGoogle = text === "Google" && question.startsWith("http");
+                          const isYouTube = text === "YouTube" && question.startsWith("http");
+                          
+                          if (isGoogle || isYouTube) {
+                            return (
+                              <a
+                                key={idx}
+                                href={question}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={`ref-link-button ${isGoogle ? "google" : "youtube"} font-extrabold flex gap-0 ${
+                                  darkMode ? "dark" : "light"
+                                }`}
+                                style={isGoogle ? { letterSpacing: 0 } : {}}
+                              >
+                                {isGoogle ? (
+                                  <>
+                                    <span style={{ color: "#2563eb" }}>G</span>
+                                    <span style={{ color: "#dc2626" }}>o</span>
+                                    <span style={{ color: "#fb923c" }}>o</span>
+                                    <span style={{ color: "#2563eb" }}>g</span>
+                                    <span style={{ color: "#16a34a" }}>l</span>
+                                    <span style={{ color: "#dc2626" }}>e</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    You<span>Tube</span>
+                                  </>
+                                )}
+                              </a>
+                            );
+                          }
+                          
+                          // Regular suggestion button
+                          return (
+                            <SuggestionButton
+                              key={idx}
+                              text={text}
+                              question={question}
+                              onClick={onQuestionSubmit}
+                              darkMode={darkMode}
+                            />
+                          );
+                        })}
                       </div>
                     )}
                   </>

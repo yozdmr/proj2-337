@@ -388,28 +388,12 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             final_definition = "not done yet..."
         
 
-        link_buttons = '<div class="mt-4 pt-3 border-t flex flex-row flex-wrap gap-4 border-zinc-300 dark:border-zinc-700">'
-        link_buttons += (
-            f"<a href='{search_str_google}' class='ref-link-button google font-extrabold flex gap-0' target='_blank' rel='noopener noreferrer' style='letter-spacing: 0;'>"
-            f"<span style='color: #2563eb;'>G</span>"
-            f"<span style='color: #dc2626;'>o</span>"
-            f"<span style='color: #fb923c;'>o</span>"
-            f"<span style='color: #2563eb;'>g</span>"
-            f"<span style='color: #16a34a;'>l</span>"
-            f"<span style='color: #dc2626;'>e</span>"
-            f"</a>"
-        )
-        link_buttons += (
-            f"<a href='{search_str_youtube}' class='ref-link-button youtube' target='_blank' rel='noopener noreferrer'>"
-            f"You<span>Tube</span>"
-            f"</a></div>"
-        )
-
-        final_definition_with_buttons = f"<p>{final_definition}</p>{link_buttons}"
-
         previous_answer = {
-            "answer": final_definition_with_buttons,
-            "suggestions": None
+            "answer": f"<p>{final_definition}</p>",
+            "suggestions": {
+                "Google": search_str_google,
+                "YouTube": search_str_youtube
+            }
         }
         return previous_answer
 
