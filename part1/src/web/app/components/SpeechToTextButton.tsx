@@ -71,7 +71,6 @@ export default function SpeechToTextButton({ onTranscript, darkMode, disabled = 
         // Service not allowed
         alert("Speech recognition service is not available. Please try again later.");
       }
-      // Other errors are silently handled - user can try again
     };
 
     recognition.onend = () => {
