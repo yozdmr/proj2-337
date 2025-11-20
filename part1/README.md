@@ -64,3 +64,5 @@ Or, use the front-end web application on `http://127.0.0.1:3000`
 View extracted ingredients by visiting `http://127.0.0.1:8080/get-ingredients`
 
 View extracted steps by visiting `http://127.0.0.1:8080/get-steps`
+
+View extracted methods by visiting `http://127.0.0.1:8080/get-methods`
