@@ -1,130 +1,117 @@
 "use client";
+
 import { useState, useEffect, useRef } from "react";
+import SpeechRecognition, { useSpeechRecognition } from "react-speech-recognition";
 
-// Type definitions for Web Speech API
-interface SpeechRecognition extends EventTarget {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  start(): void;
-  stop(): void;
-  abort(): void;
-  onstart: ((this: SpeechRecognition, ev: Event) => any) | null;
-  onresult: ((this: SpeechRecognition, ev: any) => any) | null;
-  onerror: ((this: SpeechRecognition, ev: any) => any) | null;
-  onend: ((this: SpeechRecognition, ev: Event) => any) | null;
-}
 
-interface SpeechRecognitionConstructor {
-  new (): SpeechRecognition;
-}
 
 interface SpeechToTextButtonProps {
-  onTranscript: (text: string) => void;
+  disabled: boolean;
   darkMode: boolean;
-  disabled?: boolean;
+  onTranscript?: (transcript: string) => void;
 }
 
-export default function SpeechToTextButton({ onTranscript, darkMode, disabled = false }: SpeechToTextButtonProps) {
-  const [isListening, setIsListening] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+export default function SpeechToTextButton({ disabled, darkMode, onTranscript }: SpeechToTextButtonProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [previousListening, setPreviousListening] = useState(false);
+  const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const transcriptRef = useRef<string>("");
+  
+  const {
+    transcript,
+    listening,
+    resetTranscript,
+    browserSupportsSpeechRecognition,
+    isMicrophoneAvailable,
+  } = useSpeechRecognition();
+
+  // Keep transcript ref in sync
+  useEffect(() => {
+    transcriptRef.current = transcript;
+  }, [transcript]);
 
   useEffect(() => {
-    // Check for browser support
-    const SpeechRecognitionClass = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    
-    if (!SpeechRecognitionClass) {
-      console.warn("Speech recognition not supported in this browser");
-      return;
+    setIsMounted(true);
+  }, []);
+
+  // Auto-submit after 1.5 seconds of silence
+  useEffect(() => {
+    // Clear any existing timeout
+    if (silenceTimeoutRef.current) {
+      clearTimeout(silenceTimeoutRef.current);
+      silenceTimeoutRef.current = null;
     }
 
-    // Initialize speech recognition
-    const recognition = new SpeechRecognitionClass() as SpeechRecognition;
-    recognition.continuous = false; // Stop after one utterance
-    recognition.interimResults = false; // Only return final results
-    recognition.lang = "en-US";
+    // Only set timeout if we're currently listening
+    if (listening) {
+      silenceTimeoutRef.current = setTimeout(() => {
+        // Use ref to get latest transcript value
+        const currentTranscript = transcriptRef.current;
+        if (listening) {
+          // Stop listening first
+          SpeechRecognition.stopListening();
+          
+          // If transcript is not empty, submit it
+          if (currentTranscript.trim() && onTranscript) {
+            onTranscript(currentTranscript);
+            resetTranscript();
+          } else {
+            // If transcript is empty, just reset
+            resetTranscript();
+          }
+        }
+      }, 1500); // 1.5 seconds
+    }
 
-    recognition.onstart = () => {
-      setIsListening(true);
-    };
-
-    recognition.onresult = (event: any) => {
-      const transcript = event.results[0][0].transcript;
-      onTranscript(transcript.trim());
-      setIsListening(false);
-    };
-
-    recognition.onerror = (event: any) => {
-      setIsListening(false);
-      
-      const errorType = event.error;
-      
-      if (errorType === "not-allowed") {
-        // Microphone permission denied
-        alert("Microphone access denied. Please enable microphone permissions in your browser settings.");
-      } else if (errorType === "network") {
-        alert("Speech recognition service is temporarily unavailable. Likely due to the browser blocking access to a https service from a non-https page.");
-      } else if (errorType === "audio-capture") {
-        // Audio capture error - microphone not available
-        alert("Unable to access microphone. Please check your microphone settings.");
-      } else if (errorType === "service-not-allowed") {
-        // Service not allowed
-        alert("Speech recognition service is not available. Please try again later.");
-      }
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognitionRef.current = recognition;
-
-    // Cleanup
+    // Cleanup timeout on unmount or when listening stops
     return () => {
-      if (recognitionRef.current) {
-        recognitionRef.current.stop();
+      if (silenceTimeoutRef.current) {
+        clearTimeout(silenceTimeoutRef.current);
+        silenceTimeoutRef.current = null;
       }
     };
-  }, [onTranscript]);
+  }, [transcript, listening, onTranscript, resetTranscript]);
+
+  // Handle transcript when listening stops
+  useEffect(() => {
+    if (previousListening && !listening) {
+      if (transcript.trim() && onTranscript) {
+        // Listening just stopped, send the transcript
+        onTranscript(transcript);
+        resetTranscript();
+      } else {
+        // Empty transcript, just reset
+        resetTranscript();
+      }
+    }
+    setPreviousListening(listening);
+  }, [listening, transcript, previousListening, onTranscript, resetTranscript]);
 
   const handleToggleListening = () => {
-    if (!recognitionRef.current) {
-      console.warn("Speech recognition not available");
-      return;
-    }
-
-    if (isListening) {
-      try {
-        recognitionRef.current.stop();
-      } catch (error) {
-        // Ignore errors when stopping - recognition might have already ended
-      }
-      setIsListening(false);
+    if (listening) {
+      // Stop listening - transcript will be sent via useEffect
+      SpeechRecognition.stopListening();
     } else {
-      try {
-        recognitionRef.current.start();
-      } catch (error: any) {
-        // Handle common start errors
-        if (error?.name === "InvalidStateError" || error?.message?.includes("already started")) {
-          // Recognition is already running, just update state
-          setIsListening(true);
-        } else {
-          console.warn("Failed to start speech recognition:", error?.message || error);
-          setIsListening(false);
-        }
-      }
+      // Start listening
+      resetTranscript();
+      SpeechRecognition.startListening({ continuous: true });
     }
   };
 
-  // Check if speech recognition is supported
-  const SpeechRecognitionConstructor = (typeof window !== "undefined") 
-    ? ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)
-    : null;
+  // Ensure consistent render during SSR and initial client render
+  if (!isMounted) {
+    return (
+      <div className="flex justify-center items-center"></div>
+    );
+  }
 
-  if (!SpeechRecognitionConstructor || disabled) {
+  if (!browserSupportsSpeechRecognition) {
     return null;
   }
 
+
+  
   return (
     <button
       type="button"
@@ -136,11 +123,11 @@ export default function SpeechToTextButton({ onTranscript, darkMode, disabled = 
           : darkMode
           ? "dark"
           : "light"
-      } ${isListening ? "listening" : ""}`}
-      title={isListening ? "Stop recording" : "Start voice input"}
-      aria-label={isListening ? "Stop recording" : "Start voice input"}
+      } ${listening ? "listening" : ""}`}
+      title={listening ? "Stop recording" : "Start voice input"}
+      aria-label={listening ? "Stop recording" : "Start voice input"}
     >
-      {isListening ? (
+      {listening ? (
         // Microphone icon with pulse animation (recording) - red color
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -170,4 +157,3 @@ export default function SpeechToTextButton({ onTranscript, darkMode, disabled = 
     </button>
   );
 }
-

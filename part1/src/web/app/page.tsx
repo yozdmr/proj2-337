@@ -372,10 +372,10 @@ export default function Home() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
             />
-            <SpeechToTextButton
-              onTranscript={handleSpeechTranscript}
+            <SpeechToTextButton 
+              disabled={submitting}
               darkMode={darkMode}
-              disabled={submitting || urlStatus !== "success"}
+              onTranscript={handleSpeechTranscript}
             />
             <button
               type="submit"
