@@ -6,6 +6,7 @@ from urllib.parse import urlparse
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 
+from chat.conversation_history import ConversationNode
 from process_recipe.extract_ingredients import extract_ingredients
 from process_recipe.extract_steps import extract_steps
 from process_recipe.step_components.extract_methods import extract_methods
@@ -131,6 +132,11 @@ def ask_question():
         if result.get("suggestions"):
             response["suggestions"] = result["suggestions"]
         return jsonify(response), 200
+
+@app.get("/conversation-history")
+def get_history():
+    return ConversationNode.to_list()
+
 
 
 @app.post("/reset")

@@ -14,6 +14,9 @@ from chat.frame_response.frame_ingredient_substitution import return_ingredient_
 
 from process_recipe.recipe import Recipe
 
+from chat.conversation_history import ConversationHistory
+conversation = ConversationHistory()
+
 
 global previous_question
 global previous_answer
@@ -126,6 +129,8 @@ def handle_question(question: str, recipe: Recipe) -> dict:
     global previous_question
     global previous_answer
 
+    conversation.print_history()
+
     
     question_type = classify_question(question)
     print("\t", question_type)
@@ -140,7 +145,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             }
         }
 
-
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
 
 
@@ -189,6 +194,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         }
 
         if stepped:
+            conversation.add_step(question, question_type, previous_answer, recipe.current_step)
             return previous_answer
         else:
             if question_type == "next_step":
@@ -233,7 +239,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                     "What do I do next?": "What do I do next?",
                 }
             }
-
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
         
     elif question_type in ["all_ingredients", "step_ingredients"]:
@@ -246,6 +252,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "What do I do next?": "What do I do next?",
             }
         }
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
     
 
@@ -281,20 +288,9 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                     "What do I do next?": "What do I do next?",
                 }
             }
-        
-        return previous_answer
-    
-    elif question_type in ["step_methods", "all_methods"]:
-        if question_type == "step_methods":
-            answer = return_methods_response(recipe)
-        elif question_type == "all_methods":
-            answer = return_all_methods_response(recipe)
-        previous_answer = {
-            "answer": answer,
-            "suggestions": None
-        }
-        return previous_answer
 
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+        return previous_answer
 
     elif question_type in ["how_much_ingredient"]:
         ing = _best_match_ingredient_from_question(question, recipe)
@@ -333,6 +329,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "What do I do next?": "What do I do next?",
             },
         }
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
 
     elif question_type in ["replacement_ingredient"]:
@@ -346,6 +343,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "What do I do next?": "What do I do next?",
             },
         }
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
 
     elif question_type in ["time"]:
@@ -353,6 +351,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             "answer": return_time_response(recipe),
             "suggestions": None
         }
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
 
     
@@ -371,6 +370,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
             elif tinf.get("mentions"):
                 answer = tinf["mentions"][0].get("qualitative") or tinf["mentions"][0].get("text") or answer
         previous_answer = {"answer": answer, "suggestions": None}
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer 
 
 
@@ -395,6 +395,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "YouTube": search_str_youtube
             }
         }
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
 
     # Affirmation responses (in response to a yes/no question from the previous bot response)
@@ -411,6 +412,7 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                     "Ingredients this step.": "What ingredients do I need this step?"
                 }
             }
+            conversation.add_step(question, question_type, previous_answer, recipe.current_step)
             return previous_answer
 
         # If yes, return appropriate response
@@ -434,11 +436,13 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "answer": resp,
                 "suggestions": None
             }
+            conversation.add_step(question, question_type, previous_answer, recipe.current_step)
             return previous_answer
         
         elif question_type == "repeat":
             if previous_answer is None:
                 return "I don't have anything to repeat."
+            conversation.add_step(question, question_type, previous_answer, recipe.current_step)
             return previous_answer
         elif question_type == "thanks":
             return "You're welcome! What other questions do you have?"
