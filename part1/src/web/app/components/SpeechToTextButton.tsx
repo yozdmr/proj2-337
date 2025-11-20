@@ -57,22 +57,13 @@ export default function SpeechToTextButton({ onTranscript, darkMode, disabled = 
     recognition.onerror = (event: any) => {
       setIsListening(false);
       
-      // Handle common errors - only show user-facing messages for important ones
       const errorType = event.error;
       
       if (errorType === "not-allowed") {
         // Microphone permission denied
         alert("Microphone access denied. Please enable microphone permissions in your browser settings.");
-      } else if (errorType === "no-speech") {
-        // User didn't speak - this is expected, don't log as error
-        // Just silently stop listening
-      } else if (errorType === "aborted") {
-        // Recognition was aborted (e.g., user clicked stop) - expected behavior
-        // Don't log as error
       } else if (errorType === "network") {
-        // Network error - often means service unavailable, not necessarily no internet
-        // The Web Speech API service may be blocked, unavailable, or rate-limited
-        alert("Speech recognition service is temporarily unavailable. This may be due to:\n\n• Browser security settings or extensions blocking the service\n• Firewall or network restrictions\n• Service temporarily unavailable\n• Rate limiting\n\nPlease try again in a moment, or use text input instead.");
+        alert("Speech recognition service is temporarily unavailable. Likely due to the browser blocking access to a https service from a non-https page.");
       } else if (errorType === "audio-capture") {
         // Audio capture error - microphone not available
         alert("Unable to access microphone. Please check your microphone settings.");
