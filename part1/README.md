@@ -39,7 +39,11 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000) with your browser to see the
 
 The Flask API will run in the background and take a URL as input. It will then process the URL to extract ingredients and steps, and save these within the program. Once this is done the Chat agent (also built into the Flask API) will leverage this information to talk to the user.
 
-Get your API key from [spoonacular.com](spoonacular.com). Store it in the `.env` file in `part1/src/api/`.
+Get your API key from [spoonacular.com](spoonacular.com). Store it in the `.env` file in `part1/src/api/`:
+
+```
+SPOONACULAR_API_KEY=<api key here>
+```
 
 Run the Flask app by navigating into the `part1/src/api/` folder, then running `python app.py`. This will run the app on port `8080`. Visit the API at `http://127.0.0.1:8080`, you should see `OK`.
 
