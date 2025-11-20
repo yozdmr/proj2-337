@@ -1,5 +1,11 @@
 import re
+import os
+import requests
+from dotenv import load_dotenv
 from process_recipe.recipe import Recipe
+
+# Load environment variables
+load_dotenv()
 
 # Helper constants and functions for ingredient matching
 _INGREDIENT_STOPWORDS = {
@@ -93,78 +99,104 @@ def _best_match_ingredient_from_question(question: str, recipe):
     return best
 
 
-# Substitution dictionary
-_SUBSTITUTIONS = {
-    "butter": [
-        "margarine (1:1)",
-        "olive oil (about 3/4 as much as butter)",
-        "coconut oil (1:1 in many baking recipes)",
-    ],
-    "milk": [
-        "unsweetened almond milk (1:1)",
-        "soy milk (1:1)",
-        "oat milk (1:1)",
-    ],
-    "egg": [
-        "1 tbsp ground flaxseed + 3 tbsp water (per egg)",
-        "1/4 cup unsweetened applesauce (for baking)",
-    ],
-    "sour cream": [
-        "plain Greek yogurt (1:1)",
-        "plain yogurt (1:1)",
-    ],
-    "sugar": [
-        "honey (use about 3/4 cup honey for 1 cup sugar and reduce other liquids)",
-        "maple syrup (3/4 cup for 1 cup sugar)",
-    ],
-}
+def _get_substitutes_from_spoonacular(ingredient_name: str):
+    api_key = os.getenv("SPOONACULAR_API_KEY")
+    if not api_key:
+        return None
+    
+    # Clean the ingredient name for the API
+    ingredient_clean = ingredient_name.strip()
+    if not ingredient_clean:
+        return None
+    
+    url = f"https://api.spoonacular.com/food/ingredients/substitutes"
+    params = {
+        "ingredientName": ingredient_clean,
+        "apiKey": api_key
+    }
+    
+    try:
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            return response.json()
+        else:
+            return None
+    except Exception:
+        return None
 
-
-def _canonical_substitution_key(name: str) -> str:
-    norm = _normalize_text_for_match(name)
-    if "butter" in norm:
-        return "butter"
-    if "milk" in norm:
-        return "milk"
-    if "egg" in norm or "eggs" in norm:
-        return "egg"
-    if "sour cream" in norm or ("cream" in norm and "sour" in norm):
-        return "sour cream"
-    if "sugar" in norm:
-        return "sugar"
-    return norm
+# Extract ingredient name from question using various patterns.
+def _extract_ingredient_from_question(question: str) -> str:
+    q_lower = question.lower()
+    
+    # Pattern 1: "instead of X", "substitute for X", "in place of X"
+    patterns = [
+        r"(?:instead\s+of|substitute\s+for|in\s+place\s+of)\s+([a-zA-Z\s]+?)(?:\?|$|\.|,|;|:|\s+can|\s+should|\s+could)",
+        r"substitute\s+([a-zA-Z\s]+?)(?:\?|$|\.|,|;|:)",
+        r"replace\s+([a-zA-Z\s]+?)(?:\?|$|\.|,|;|:|\s+with)",
+        r"use\s+instead\s+of\s+([a-zA-Z\s]+?)(?:\?|$|\.|,|;|:)",
+    ]
+    
+    for pattern in patterns:
+        m = re.search(pattern, q_lower)
+        if m:
+            extracted = m.group(1).strip()
+            # Remove common stopwords from the end
+            extracted = re.sub(r'\s+(the|a|an|for|with|in|on|at|to|of)$', '', extracted)
+            if extracted and len(extracted) > 1:
+                return extracted
+    
+    # Pattern 2: Try to find ingredient after common question starters
+    # "What can I use instead of X?"
+    m = re.search(r"what\s+(?:can|should|could)\s+(?:i|we|you)\s+use\s+(?:instead\s+of|for)\s+([a-zA-Z\s]+?)(?:\?|$|\.)", q_lower)
+    if m:
+        extracted = m.group(1).strip()
+        extracted = re.sub(r'\s+(the|a|an|for|with|in|on|at|to|of)$', '', extracted)
+        if extracted and len(extracted) > 1:
+            return extracted
+    
+    # pattern 3: flexible, look for any word that might be ingredient
+    # desperation case
+    m = re.search(r"(?:^|\s)([a-zA-Z]+(?:\s+[a-zA-Z]+){0,2})\s+(?:substitute|instead)", q_lower)
+    if m:
+        extracted = m.group(1).strip()
+        if extracted and len(extracted) > 1:
+            return extracted
+    
+    return ""
 
 
 def return_ingredient_substitution_response(recipe: Recipe, question: str) -> tuple[str, str]:
     # Ingredient substitution, e.g. "What can I use instead of butter?"
-    ing = _best_match_ingredient_from_question(question, recipe)
     raw_name = ""
+    
+    # first try to match from recipe ingredients
+    ing = _best_match_ingredient_from_question(question, recipe)
     if ing is not None:
         raw_name = str(ing.get("name") or "").strip()
-
+    
+    # if not found in recipe extract from question text
     if not raw_name:
-        q_lower = question.lower()
-        m = re.search(r"(?:instead of|substitute for|in place of)\\s+([a-zA-Z\\s]+)", q_lower)
-        if m:
-            raw_name = m.group(1).strip()
-
+        raw_name = _extract_ingredient_from_question(question)
+    
+    # if still no ingredient found return not found message
     if not raw_name:
-        answer = (
-            "I'm not sure which ingredient you want to replace. "
-            "Try asking 'What can I use instead of butter?'"
-        )
+        answer =  "I'm not sure which ingredient you want to replace. "
+        
         ingredient_name = ""
     else:
-        key = _canonical_substitution_key(raw_name)
-        options = _SUBSTITUTIONS.get(key)
-
-        if options:
-            items_html = "".join(f"<li>{opt}</li>" for opt in options)
+        # Fetch substitutes from Spoonacular API
+        api_response = _get_substitutes_from_spoonacular(raw_name)
+        
+        if api_response and api_response.get("substitutes"):
+            substitutes = api_response.get("substitutes", [])
+            count = len(substitutes)
+            items_html = "".join(f"<li>{sub}</li>" for sub in substitutes)
             answer = (
-                f"Here are some common substitutes for {key}:"
+                f"<p>Found {count} possible substitute{'s' if count != 1 else ''} for {raw_name}:</p>"
                 f"<ul>{items_html}</ul>"
             )
         else:
+            # Fallback to Google search if API fails or returns no results
             q_param = f"substitute for {raw_name}".replace(" ", "+")
             url = f"https://www.google.com/search?q={q_param}"
             answer = (

@@ -94,6 +94,13 @@ def get_steps():
         return jsonify({"error": "No steps saved"}), 404
     return jsonify({"steps": recipe.get_steps()}), 200
 
+@app.get("/get-ingredients")
+def get_ingredients():
+    global recipe
+    if recipe.ingredients is None:
+        return jsonify({"error": "No steps saved"}), 404
+    return jsonify({"ingredients": recipe.ingredients}), 200
+
 @app.get("/get-methods")
 def get_methods():
     global recipe

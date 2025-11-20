@@ -107,7 +107,6 @@ def _extract_descriptor_and_preparation_from_name(name: Optional[str]) -> tuple[
                 remaining_name = ', '.join(parts)
     
     # Now extract descriptors from the remaining name
-    # Process word by word, handling commas
     descriptor_parts = []
     words = remaining_name.split()
     remaining_words = []
@@ -124,22 +123,79 @@ def _extract_descriptor_and_preparation_from_name(name: Optional[str]) -> tuple[
                 # Remove trailing comma from second word if present
                 word1 = words[i]
                 word2 = words[i+1].rstrip(',')
-                descriptor_parts.append(' '.join([word1, word2]))
+                # Start building a descriptor phrase (may include "or" connectors)
+                descriptor_phrase_parts = [word1, word2]
                 i += 2
                 found_descriptor = True
                 
+                # Check for "or" connectors followed by another descriptor
+                while i < len(words):
+                    # Check if current word is "or"
+                    if words[i].lower().rstrip(',') == 'or':
+                        if i + 1 < len(words):
+                            next_word_lower = words[i + 1].lower().rstrip(',')
+                            if next_word_lower in descriptor_words:
+                                descriptor_phrase_parts.append(words[i].rstrip(','))
+                                descriptor_phrase_parts.append(words[i + 1].rstrip(','))
+                                i += 2
+                                continue
+                            elif i + 2 < len(words):
+                                two_word_lower = ' '.join([words[i + 1].lower(), words[i + 2].lower()])
+                                if two_word_lower in multi_word_descriptors:
+                                    descriptor_phrase_parts.append(words[i].rstrip(','))
+                                    descriptor_phrase_parts.append(words[i + 1].rstrip(','))
+                                    descriptor_phrase_parts.append(words[i + 2].rstrip(','))
+                                    i += 3
+                                    continue
+                        # "or" not followed by descriptor, stop here
+                        break
+                    else:
+                        # Not "or", stop collecting descriptor phrase
+                        break
+                
+                # Join the descriptor phrase parts
+                descriptor_parts.append(' '.join(descriptor_phrase_parts))
+                
                 # If word2 had a comma, moved past a comma boundary
                 # Continue checking for more descriptors after comma
-                if words[i-1].endswith(','):
+                if i > 0 and words[i-1].endswith(','):
                     continue
         
         # Check single-word descriptors
         if not found_descriptor and i < len(words):
             word_lower = words[i].lower().rstrip(',')
             if word_lower in descriptor_words:
-                descriptor_parts.append(words[i].rstrip(','))
+                # Start building a descriptor phrase (may include "or" connectors)
+                descriptor_phrase_parts = [words[i].rstrip(',')]
                 i += 1
                 found_descriptor = True
+                
+                # Check for "or" connectors followed by another descriptor
+                while i < len(words):
+                    # Check if current word is "or"
+                    if words[i].lower().rstrip(',') == 'or':
+                        if i + 1 < len(words):
+                            next_word_lower = words[i + 1].lower().rstrip(',')
+                            if next_word_lower in descriptor_words:
+                                descriptor_phrase_parts.append(words[i].rstrip(','))
+                                descriptor_phrase_parts.append(words[i + 1].rstrip(','))
+                                i += 2
+                                continue
+                            # Check if it's part of a multi-word descriptor
+                            elif i + 2 < len(words):
+                                two_word_lower = ' '.join([words[i + 1].lower(), words[i + 2].lower()])
+                                if two_word_lower in multi_word_descriptors:
+                                    descriptor_phrase_parts.append(words[i].rstrip(','))
+                                    descriptor_phrase_parts.append(words[i + 1].rstrip(','))
+                                    descriptor_phrase_parts.append(words[i + 2].rstrip(','))
+                                    i += 3
+                                    continue
+                        # "or" not followed by descriptor, stop here
+                        break
+                    else:
+                        break
+                
+                descriptor_parts.append(' '.join(descriptor_phrase_parts))
             else:
                 # First non-descriptor found, rest is the name
                 break
@@ -147,7 +203,6 @@ def _extract_descriptor_and_preparation_from_name(name: Optional[str]) -> tuple[
         if not found_descriptor:
             break
     
-    # Remaining words form the name
     remaining_words = words[i:]
     
     # Join descriptor parts (preserve comma separations if they were there)
@@ -158,11 +213,9 @@ def _extract_descriptor_and_preparation_from_name(name: Optional[str]) -> tuple[
     cleaned_name = _re.sub(r'\s*,\s*$', '', cleaned_name)  # Remove trailing comma
     cleaned_name = _clean_space(cleaned_name) if cleaned_name else None
     
-    # Clean up descriptor
     if descriptor:
         descriptor = descriptor.strip().rstrip(',')
     
-    # Clean up preparation
     if preparation:
         preparation = preparation.strip().rstrip(',')
     

@@ -16,6 +16,7 @@ def return_ingredients_response(recipe: Recipe, question_type: str="", get_first
     if len(ingredients) == 0 and header.split(" ")[-1] == "step:":
         return "There are no ingredients for this step."
     
+    print("\t", ingredients)
     # Construct response with custom CSS class
     response = f'<h4 class="chat-header">{header}</h4>'
 

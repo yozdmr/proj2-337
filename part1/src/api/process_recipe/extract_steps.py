@@ -32,6 +32,15 @@ def _contains_directions_text(tag: Tag) -> bool:
     return False
 
 
+# Removes stop words (as whole words only) from text
+def _trim_stop_words(text: str) -> str:
+    stop_words = ["in", "and", "or", "of", "an", "a"]
+    pattern = r'\b(' + '|'.join(_re.escape(word) for word in stop_words) + r')\b'
+    result = _re.sub(pattern, '', text, flags=_re.IGNORECASE)
+    result = _re.sub(r'\s+', ' ', result).strip()
+    return result
+
+
 
 '''
 {
@@ -145,10 +154,17 @@ def extract_steps(recipe: str, ingredients: list[dict]) -> list[dict]:
     for idx, description in enumerate(step_descriptions, start=1):
 
         step_ingredients = []
+        trimmed_description = _trim_stop_words(description)
         for ingredient in ingredients:
             ingredient_name = ingredient.get("name")
-            if ingredient_name and ingredient_name in description:
+            if ingredient_name.lower() in trimmed_description:
                 step_ingredients.append(ingredient_name)
+                continue
+            
+            ingredient_name_parts = ingredient_name.lower().split(", ")
+            for part in ingredient_name_parts:
+                if part.lower() in trimmed_description:
+                    step_ingredients.append(part)
 
 
         # NOTE: Main structure, do final output here
