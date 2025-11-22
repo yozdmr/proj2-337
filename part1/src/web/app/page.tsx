@@ -5,6 +5,7 @@ import Header from "./components/Header";
 import Footer from "./components/Footer";
 import ChatWindow from "./components/ChatWindow";
 import SpeechToTextButton from "./components/SpeechToTextButton";
+import WaveformVisualizer from "./components/WaveformVisualizer";
 
 function isValidUrl(urlStr: string) {
   try {
@@ -29,6 +30,7 @@ export default function Home() {
   const [recipeName, setRecipeName] = useState<string | null>(null);
   const [recipeUrl, setRecipeUrl] = useState<string | null>(null);
   const [showFadeIn, setShowFadeIn] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Trigger fade-in after input box transition completes (500ms)
@@ -335,11 +337,15 @@ export default function Home() {
             </div>
           )}
           <div className="relative">
+            {/* Waveform visualizer - appears when listening, overlays input */}
+            {isListening && (
+              <WaveformVisualizer listening={isListening} darkMode={darkMode} />
+            )}
             <button
               type="button"
               onClick={handleReset}
               disabled={submitting || submittedUrl === null || urlStatus !== "success"}
-              className={`icon-button absolute left-2 top-1/2 -translate-y-1/2 ${
+              className={`icon-button absolute left-2 top-1/2 -translate-y-1/2 z-20 ${
                 submitting || submittedUrl === null || urlStatus !== "success"
                   ? "disabled"
                   : darkMode
@@ -376,11 +382,12 @@ export default function Home() {
               disabled={submitting}
               darkMode={darkMode}
               onTranscript={handleSpeechTranscript}
+              onListeningChange={setIsListening}
             />
             <button
               type="submit"
               disabled={submitting || !input.trim()}
-              className={`icon-button absolute right-2 top-1/2 -translate-y-1/2 ${darkMode ? "dark" : "light"}`}
+              className={`icon-button absolute right-2 top-1/2 -translate-y-1/2 z-20 ${darkMode ? "dark" : "light"}`}
             >
               {/* https://icons.getbootstrap.com/icons/arrow-right-short/ */}
               <svg

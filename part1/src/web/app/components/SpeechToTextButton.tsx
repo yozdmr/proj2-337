@@ -9,10 +9,11 @@ interface SpeechToTextButtonProps {
   disabled: boolean;
   darkMode: boolean;
   onTranscript?: (transcript: string) => void;
+  onListeningChange?: (listening: boolean) => void;
 }
 
 
-export default function SpeechToTextButton({ disabled, darkMode, onTranscript }: SpeechToTextButtonProps) {
+export default function SpeechToTextButton({ disabled, darkMode, onTranscript, onListeningChange }: SpeechToTextButtonProps) {
   const [isMounted, setIsMounted] = useState(false);
   const [previousListening, setPreviousListening] = useState(false);
   const silenceTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -73,6 +74,13 @@ export default function SpeechToTextButton({ disabled, darkMode, onTranscript }:
     };
   }, [transcript, listening, onTranscript, resetTranscript]);
 
+  // Notify parent of listening state changes
+  useEffect(() => {
+    if (onListeningChange) {
+      onListeningChange(listening);
+    }
+  }, [listening, onListeningChange]);
+
   // Handle transcript when listening stops
   useEffect(() => {
     if (previousListening && !listening) {
@@ -117,7 +125,7 @@ export default function SpeechToTextButton({ disabled, darkMode, onTranscript }:
       type="button"
       onClick={handleToggleListening}
       disabled={disabled}
-      className={`icon-button absolute right-14 top-1/2 -translate-y-1/2 ${
+      className={`icon-button absolute right-14 top-1/2 -translate-y-1/2 z-20 ${
         disabled
           ? "disabled"
           : darkMode
@@ -138,8 +146,8 @@ export default function SpeechToTextButton({ disabled, darkMode, onTranscript }:
           className="animate-pulse"
           style={{ color: '#ef4444' }}
         >
-          <path d="M8 1a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3"/>
-          <path d="M5 9.5a.5.5 0 0 0-1 0V11a4 4 0 0 0 8 0V9.5a.5.5 0 0 0-1 0V11a3 3 0 0 1-6 0V9.5z"/>
+          <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0z"/>
+          <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>
         </svg>
       ) : (
         // Microphone icon (idle)
@@ -150,8 +158,8 @@ export default function SpeechToTextButton({ disabled, darkMode, onTranscript }:
           fill="currentColor"
           viewBox="0 0 16 16"
         >
-          <path d="M8 1a3 3 0 0 0-3 3v4a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3"/>
-          <path d="M5 9.5a.5.5 0 0 0-1 0V11a4 4 0 0 0 8 0V9.5a.5.5 0 0 0-1 0V11a3 3 0 0 1-6 0V9.5z"/>
+          <path d="M5 3a3 3 0 0 1 6 0v5a3 3 0 0 1-6 0z"/>
+          <path d="M3.5 6.5A.5.5 0 0 1 4 7v1a4 4 0 0 0 8 0V7a.5.5 0 0 1 1 0v1a5 5 0 0 1-4.5 4.975V15h3a.5.5 0 0 1 0 1h-7a.5.5 0 0 1 0-1h3v-2.025A5 5 0 0 1 3 8V7a.5.5 0 0 1 .5-.5"/>
         </svg>
       )}
     </button>

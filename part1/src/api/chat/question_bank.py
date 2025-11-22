@@ -7,6 +7,8 @@ RECIPE_QUESTIONS = {
     "whole recipe": "recipe",
     "the whole recipe": "recipe",
     "the entire recipe": "recipe",
+    "what is the full recipe": "recipe",
+    "what is the recipe": "recipe",
     "what is the whole recipe": "recipe",
     "what are all the instructions": "recipe",
     "display the recipe": "recipe"
@@ -61,6 +63,8 @@ DIRECTIONAL_QUESTIONS = {
     "what do i do on the step": "nth_step",
     "what do i do on the step in the recipe": "nth_step",
     "what do i do on the step in the instructions": "nth_step",
+    "what is the step": "nth_step",
+    "what's the step": "nth_step",
     "take me to the step": "nth_step",
     "take me to the step in the recipe": "nth_step",
     "take me to the step in the instructions": "nth_step",
@@ -212,6 +216,28 @@ DETAILED_CLARIFICATION_QUESTIONS = {
     "what's that": "clarification_general",
     "what is this": "clarification_general",
     "what's this": "clarification_general",
+}
+
+VAGUE_QUESTIONS = {
+    # Provide definition for tool or ingredient
+    "what is that": "vague_item",
+    "what is it": "vague_item",
+    "what is this": "vague_item",
+
+    # Provide quantity for ingredient
+    "how much of that do i need": "vague_quantity",
+    "how much of this do i need": "vague_quantity",
+    "how much of it do i need": "vague_quantity",
+    "how much of those do i need": "vague_quantity",
+    "how much of these do i need": "vague_quantity",
+    "how much of them do i need": "vague_quantity",
+
+    # Provide definition for method
+    "how do i do that": "vague_method",
+    "how do i do this": "vague_method",
+    "how do i do it": "vague_method",
+    "how do i do them": "vague_method",
+    "how do i do these": "vague_method"
 }
 
 
