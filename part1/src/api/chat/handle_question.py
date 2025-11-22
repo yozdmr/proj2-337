@@ -10,6 +10,7 @@ from chat.frame_response.frame_clarifications import return_specific_clarificati
 from chat.frame_response.frame_methods import return_methods_response, return_all_methods_response
 from chat.frame_response.frame_methods import return_methods_response
 from chat.frame_response.frame_ingredient_substitution import return_ingredient_substitution_response
+from chat.frame_response.frame_ingredient_quantity import get_ingredient_quantity_response
 
 
 from process_recipe.recipe import Recipe
@@ -292,45 +293,70 @@ def handle_question(question: str, recipe: Recipe) -> dict:
         conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer
 
-    elif question_type in ["how_much_ingredient"]:
-        ing = _best_match_ingredient_from_question(question, recipe)
-
-        if ing is None:
-            answer_text = (
-                "I'm not sure which ingredient you're asking about. "
-                "Try asking something like 'How much salt do I need?'."
-            )
-        else:
-            name = str(ing.get("name") or "").strip()
-            quantity = str(ing.get("quantity") or "").strip()
-            measurement = str(ing.get("measurement") or "").strip()
-            descriptor = str(ing.get("descriptor") or "").strip()
-
-            display_name_parts = [p for p in [descriptor, name] if p]
-            display_name = " ".join(display_name_parts) if display_name_parts else "this ingredient"
-
-            if quantity or measurement:
-                amount = " ".join(p for p in [quantity, measurement] if p)
-                answer_text = f"You need {amount} of {display_name}."
+    elif question_type in ["how_much_ingredient", "vague_quantity"]:
+        
+        if question_type == "vague_quantity":
+            # Look at previous step in the conversation
+            prev_node = conversation.current
+            
+            if prev_node is None or prev_node.step is None:
+                answer_text = "I'm not sure what you're referring to."
             else:
-                prep = ing.get("preparation")
-                if prep:
-                    answer_text = (
-                        f"The recipe does not specify an exact amount for {display_name}, "
-                        f"but it says: {prep}."
-                    )
-                else:
-                    answer_text = f"The recipe does not specify an exact amount for {display_name}."
+                prev_step = prev_node.step
 
-        previous_answer = {
-            "answer": f"<p>{answer_text}</p>",
-            "suggestions": {
-                "What can I use instead?": f"What can I use instead of {ing['name']}?",
+                # Get ingredients from the previous step
+                ingredients = prev_step.ingredients
+                num_ingredients = len(ingredients)
+                
+                if num_ingredients == 1:
+                    # Find the ingredient dict from the recipe that matches the ingredient name
+                    ingredient_name = ingredients[0]
+                    recipe_ingredients = _get_ingredient_list(recipe)
+                    
+                    # Find matching ingredient dict
+                    matched_ing = None
+                    ingredient_name_norm = _normalize_text_for_match(ingredient_name)
+                    for ing in recipe_ingredients:
+                        if isinstance(ing, dict):
+                            ing_name = str(ing.get("name") or "").strip()
+                            ing_name_norm = _normalize_text_for_match(ing_name)
+                            # Check if the ingredient name matches (substring or exact match)
+                            if ingredient_name_norm in ing_name_norm or ing_name_norm in ingredient_name_norm:
+                                matched_ing = ing
+                                break
+                    
+                    # Call the helper function for the matched ingredient
+                    answer_text = get_ingredient_quantity_response(matched_ing)
+                elif num_ingredients == 0:
+                    answer_text = "I couldn't find any ingredients in the previous step."
+                else:
+                    # Join the ingredients list with commas
+                    ingredient_list = ", ".join(ingredients)
+                    answer_text = f"I'm not sure which of these ingredients you're referring to: {ingredient_list}. Please ask again and be more specific."
+            
+            previous_answer = {
+                "answer": f"<p>{answer_text}</p>",
+                "suggestions": None
+            }
+            conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+            return previous_answer
+
+        elif question_type == "how_much_ingredient":
+            ing = _best_match_ingredient_from_question(question, recipe)
+            answer_text = get_ingredient_quantity_response(ing)
+
+            suggestions = {
                 "What do I do next?": "What do I do next?",
-            },
-        }
-        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
-        return previous_answer
+            }
+            if ing and ing.get("name"):
+                suggestions["What can I use instead?"] = f"What can I use instead of {ing['name']}?"
+
+            previous_answer = {
+                "answer": f"<p>{answer_text}</p>",
+                "suggestions": suggestions,
+            }
+            conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+            return previous_answer
 
     elif question_type in ["replacement_ingredient"]:
         # Ingredient substitution, e.g. "What can I use instead of butter?"

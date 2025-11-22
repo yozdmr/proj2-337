@@ -225,6 +225,8 @@ VAGUE_QUESTIONS = {
     "what is this": "vague_item",
 
     # Provide quantity for ingredient
+    "how much of that": "vague_quantity",
+    "how much of it": "vague_quantity",
     "how much of that do i need": "vague_quantity",
     "how much of this do i need": "vague_quantity",
     "how much of it do i need": "vague_quantity",
@@ -300,5 +302,6 @@ QUESTION_BANK = [
     TOOL_QUESTIONS,
     METHOD_QUESTIONS,
     DETAILED_CLARIFICATION_QUESTIONS,
+    VAGUE_QUESTIONS,
     AFFIRMATIONS
 ]

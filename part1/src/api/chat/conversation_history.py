@@ -5,12 +5,14 @@ class ConversationNode:
         self.answer = answer
         self.step = step
         self.next = None
+        self.prev = None
 
 
 class ConversationHistory:
     def __init__(self):
         self.head = None
         self.tail = None
+        self.current = None
 
     def add_step(self, question, question_type, answer, step_obj):
         node = ConversationNode(question, question_type, answer, step_obj)
@@ -18,28 +20,40 @@ class ConversationHistory:
         if self.head is None:
             self.head = node
             self.tail = node
+            self.current = node
         else:
+            # Set up doubly linked list connections
             self.tail.next = node
+            node.prev = self.tail
             self.tail = node
+            self.current = node
 
     def last(self):
         return self.tail
 
     def find_last_with(self, condition):
-        """Walk backwards by scanning; linked list only tracks forward but tail pointer helps."""
-        curr = self.head
-        stack = []
-
+        curr = self.tail
         while curr:
-            stack.append(curr)
-            curr = curr.next
-        
-        # Walk backward
-        while stack:
-            node = stack.pop()
-            if condition(node):
-                return node
+            if condition(curr):
+                return curr
+            curr = curr.prev
         return None
+    
+    def step_forward(self):
+        if self.current is None:
+            return None, False
+        if self.current.next is None:
+            return self.current, False
+        self.current = self.current.next
+        return self.current, True
+    
+    def step_backward(self):
+        if self.current is None:
+            return None, False
+        if self.current.prev is None:
+            return self.current, False
+        self.current = self.current.prev
+        return self.current, True
     
     def to_list(self):
         out = []
