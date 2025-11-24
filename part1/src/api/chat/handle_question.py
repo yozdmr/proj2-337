@@ -500,16 +500,13 @@ def handle_question(question: str, recipe: Recipe) -> dict:
 
     
 
-    elif question_type in ["clarification_specific", "clarification_general"]:
+    elif question_type in ["clarification_specific"]:
         # Prepare search URLs for both types
         question_search_term = question.replace(" ", "+")
         search_str_google = f"https://www.google.com/search?q={question_search_term}"
         search_str_youtube = f"https://www.youtube.com/results?search_query={question_search_term}"
         
-        if question_type == "clarification_specific":
-            final_definition = return_specific_clarification_response(recipe, question)
-        elif question_type == "clarification_general":
-            final_definition = "not done yet..."
+        final_definition = return_specific_clarification_response(recipe, question)
         
 
         previous_answer = {

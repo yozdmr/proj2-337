@@ -4,14 +4,15 @@ import re as _re
 
 
 # Checks whether contains ingredients text in the tag or a span
+# Only matches if the text is exactly "ingredients" (case-insensitive)
 def _contains_ingredients_text(tag: Tag) -> bool:
     text = tag.get_text(strip=True).lower()
-    if "ingredients" in text:
+    if text == "ingredients":
         return True
     span = tag.find("span")
     if span and isinstance(span, Tag):
         span_text = span.get_text(strip=True).lower()
-        if "ingredients" in span_text:
+        if span_text == "ingredients":
             return True
     return False
 
@@ -311,15 +312,15 @@ def extract_ingredients(recipe: str) -> list[dict]:
             spans = target.find_all("span")
             if any(s.has_attr("data-ingredient-name") or s.has_attr("data-ingredient-quantity") or s.has_attr("data-ingredient-unit") for s in spans):
                 item = _parse_li_structured(li)
-            
-            if any(item.get(k) for k in ("name", "quantity", "measurement", "descriptor", "preparation")):
-                if item.get("name") is None:
-                    if item.get("descriptor") is not None:
-                        item["name"], item["descriptor"] = item["descriptor"], item["name"]
-                    else:
-                        continue
                 
-                results.append(item)
+                if any(item.get(k) for k in ("name", "quantity", "measurement", "descriptor", "preparation")):
+                    if item.get("name") is None:
+                        if item.get("descriptor") is not None:
+                            item["name"], item["descriptor"] = item["descriptor"], item["name"]
+                        else:
+                            continue
+                    
+                    results.append(item)
         return results
 
     ingredients: list[dict] = []

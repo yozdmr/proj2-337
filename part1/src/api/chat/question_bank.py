@@ -24,6 +24,8 @@ DIRECTIONAL_QUESTIONS = {
     "what's the next step": "next_step",
     "what is the next step": "next_step",
     "what do i do next": "next_step",
+    "what do i do after": "next_step",
+    "what should i do next": "next_step",
 
     # Previous step
     "is previous step": "previous_step",
@@ -68,6 +70,25 @@ DIRECTIONAL_QUESTIONS = {
     "take me to the step": "nth_step",
     "take me to the step in the recipe": "nth_step",
     "take me to the step in the instructions": "nth_step",
+    "what is the second step": "nth_step",
+    "what is the third step": "nth_step",
+    "what is the fourth step": "nth_step",
+    "what is the fifth step": "nth_step",
+    "what is the sixth step": "nth_step",
+    "what is the seventh step": "nth_step",
+    "what is the eighth step": "nth_step",
+    "what is the ninth step": "nth_step",
+    "what is the tenth step": "nth_step",
+    "what is the eleventh step": "nth_step",
+    "what is the twelvth step": "nth_step",
+    "what is the thirteenth step": "nth_step",
+    "what is the fourteenth step": "nth_step",
+    "what is the fifteenth step": "nth_step",
+    "what is the sixteenth step": "nth_step",
+    "what is the seventeenth step": "nth_step",
+    "what is the eighteenth step": "nth_step",
+    "what is the ninteenth step": "nth_step",
+    "what is the twentieth step": "nth_step",
 }
 
 # Ingredient questions
@@ -208,14 +229,7 @@ DETAILED_CLARIFICATION_QUESTIONS = {
     "what is": "clarification_specific",
     "what's": "clarification_specific",
     "what are": "clarification_specific",
-    "what's are": "clarification_specific",
-
-    "how do i do that": "clarification_general",
-    "how do i do this": "clarification_general",
-    "what is that": "clarification_general",
-    "what's that": "clarification_general",
-    "what is this": "clarification_general",
-    "what's this": "clarification_general",
+    "what's are": "clarification_specific"
 }
 
 VAGUE_QUESTIONS = {
@@ -270,6 +284,7 @@ AFFIRMATIONS = {
     "repeat please": "repeat",
     "repeat that": "repeat",
     "repeat again": "repeat",
+    "can you repeat that": "repeat",
     "repeat one more time": "repeat",
     "repeat one more time please": "repeat",
     "repeat one more time that": "repeat",
