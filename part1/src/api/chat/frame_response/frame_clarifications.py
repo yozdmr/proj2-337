@@ -9,6 +9,7 @@ def return_specific_clarification_response(recipe: Recipe, question: str) -> str
     for step in recipe.steps:
         recipe_tools.extend(step["tools"])
     
+    print(question, recipe.ingredients, recipe_tools)
     clarification_subject, clarification_type = extract_clarification_subject(question, recipe.ingredients, recipe_tools)
 
     print("\t", clarification_subject, clarification_type)
@@ -32,7 +33,8 @@ def return_specific_clarification_response(recipe: Recipe, question: str) -> str
             if final_definition is None:
                 final_definition = definitions[0]["definitions"][0]["definition"]
 
-            final_definition += " You might find more useful information below!"
+            final_definition += ". You might find more useful information below!"
+            final_definition = f"{clarification_subject}: " + final_definition
         else:
             final_definition = "I wasn't able to find a definition for that myself."
             final_definition += " Use the resources below to find more information."

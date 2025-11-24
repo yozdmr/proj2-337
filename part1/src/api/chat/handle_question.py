@@ -332,7 +332,10 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 else:
                     # Join the ingredients list with commas
                     ingredient_list = ", ".join(ingredients)
-                    answer_text = f"I'm not sure which of these ingredients you're referring to: {ingredient_list}. Please ask again and be more specific."
+                    answer_text = (
+                        f"I'm not sure which of these ingredients you're referring to: {ingredient_list}."
+                        "\nPlease ask again and be more specific."
+                    )
             
             previous_answer = {
                 "answer": f"<p>{answer_text}</p>",
@@ -368,6 +371,101 @@ def handle_question(question: str, recipe: Recipe) -> dict:
                 "How much do I need?": f"How much {ingr} do I need?",
                 "What do I do next?": "What do I do next?",
             },
+        }
+        conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+        return previous_answer
+    
+    elif question_type in ["vague_item", "vague_method"]:
+        # Look at previous step in the conversation
+        prev_node = conversation.current
+        
+        if prev_node is None or prev_node.step is None:
+            answer_text = "I'm not sure what you're referring to."
+        else:
+            prev_step = prev_node.step
+            
+            if question_type == "vague_method":
+                # Get methods from the previous step
+                methods = prev_step.methods
+                num_methods = len(methods)
+                
+                if num_methods == 0:
+                    answer_text = "I couldn't find any methods in the previous step."
+                elif num_methods == 1:
+                    # Call the clarification function for the single method
+                    method_name = methods[0]
+                    clarification_question = f"How do I {method_name}?"
+                    answer_text = return_specific_clarification_response(recipe, clarification_question)
+                    
+                    # Prepare search URLs
+                    search_term = method_name.replace(" ", "+")
+                    search_str_google = f"https://www.google.com/search?q={search_term}"
+                    search_str_youtube = f"https://www.youtube.com/results?search_query={search_term}"
+                    
+                    previous_answer = {
+                        "answer": f"<p>{answer_text}</p>",
+                        "suggestions": {
+                            "Google": search_str_google,
+                            "YouTube": search_str_youtube
+                        }
+                    }
+                    conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+                    return previous_answer
+                else:
+                    # Join the methods list with commas
+                    methods_list = ", ".join(methods)
+                    answer_text = (
+                        f"I'm not sure which of these methods you're referring to: {methods_list}."
+                        "\nPlease ask again and be more specific."
+                    )
+            
+            else:  # vague_item
+                # Check both tools and ingredients from the previous step
+                tools = prev_step.tools
+                ingredients = prev_step.ingredients
+                
+                # Combine tools and ingredients for item checking
+                items = []
+                if tools:
+                    items.extend(tools)
+                if ingredients:
+                    items.extend(ingredients)
+                
+                num_items = len(items)
+                
+                if num_items == 0:
+                    answer_text = "I couldn't find any tools or ingredients in the previous step."
+                elif num_items == 1:
+                    # Call the clarification function for the single item
+                    item_name = items[0]
+                    clarification_question = f"What is {items[0]}?"
+                    answer_text = return_specific_clarification_response(recipe, clarification_question)
+                    
+                    # Prepare search URLs
+                    search_term = clarification_question.replace(" ", "+")
+                    search_str_google = f"https://www.google.com/search?q={search_term}"
+                    search_str_youtube = f"https://www.youtube.com/results?search_query={search_term}"
+                    
+                    previous_answer = {
+                        "answer": f"<p>{answer_text}</p>",
+                        "suggestions": {
+                            "Google": search_str_google,
+                            "YouTube": search_str_youtube
+                        }
+                    }
+                    conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+                    return previous_answer
+                else:
+                    # Join the items list with commas
+                    items_list = ", ".join(items)
+                    answer_text = (
+                        f"I'm not sure which of these items you're referring to: {items_list}."
+                        "\nPlease ask again and be more specific."
+                    )
+
+        previous_answer = {
+            "answer": f"<p>{answer_text}</p>",
+            "suggestions": None
         }
         conversation.add_step(question, question_type, previous_answer, recipe.current_step)
         return previous_answer

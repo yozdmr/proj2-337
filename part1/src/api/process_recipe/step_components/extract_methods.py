@@ -56,11 +56,43 @@ def build_method_list():
 COOKING_METHODS = set(build_method_list())
 lemmatizer = WordNetLemmatizer()
 
+def _find_best_match(word: str, methods: set[str]) -> str | None:
+    word_lower = word.lower()
+    
+    # First, try exact match
+    if word_lower in methods:
+        return word_lower
+    
+    # Try lemmatized form
+    lemma = lemmatizer.lemmatize(word_lower, "v")
+    if lemma in methods:
+        return lemma
+    
+    # Find best closest match - prefer longer matches
+    # This handles cases where a word contains a method as a substring
+    best_match = None
+    best_score = 0
+    
+    for method in methods:
+        # Check if word starts with method (e.g., "preheating" contains "preheat")
+        # We want the longest matching method
+        if word_lower.startswith(method) and len(method) > best_score:
+            best_match = method
+            best_score = len(method)
+        # Check if method starts with word (e.g., word is "heat" and method is "preheat")
+        # This is less common but possible
+        elif method.startswith(word_lower) and len(word_lower) > best_score:
+            best_match = method
+            best_score = len(word_lower)
+    
+    # Only return if we found a reasonably good match (at least 3 characters)
+    # This prevents false matches on very short substrings
+    if best_match and best_score >= 3:
+        return best_match
+    
+    return None
+
 def extract_methods(description: str) -> list[str]:
-    """
-    Identify cooking/preparation methods (verbs) in a recipe step.
-    More robust version with lemmatization and regex fallback.
-    """
     if not description:
         return []
 
@@ -69,16 +101,32 @@ def extract_methods(description: str) -> list[str]:
     tagged = pos_tag(tokens)
 
     methods = set()
+    processed_words = set()  # Track words we've already processed
 
+    # Process each word individually to avoid multiple matches from one word
     for word, tag in tagged:
         if tag.startswith("VB"):
-            lemma = lemmatizer.lemmatize(word, "v")
-            if lemma in COOKING_METHODS:
-                methods.add(lemma)
+            # Try exact match first (word itself or lemmatized form)
+            match = _find_best_match(word, COOKING_METHODS)
+            if match:
+                methods.add(match)
+                processed_words.add(word)
 
-    # Fallback: look for common cooking verbs that may not be tagged
-    for verb in COOKING_METHODS:
-        if verb in description:
-            methods.add(verb)
+    # Fallback: check for methods that weren't tagged as verbs but are in our methods list
+    # This handles cases where words like "Preheat" or "Season" are mis-tagged
+    # (e.g., sometimes tagged as NN/NNP at sentence start, though rare)
+    # Check the first two words of each comma-delimited chunk (or just that word if chunk is 1 word)
+    # This handles imperative verbs that appear at the start of clauses
+    chunks = description.split(',')
+    for chunk in chunks:
+        chunk_tokens = word_tokenize(chunk.strip())
+        # If chunk has 1 word, check that word; otherwise check first two words
+        words_to_check = chunk_tokens[:1] if len(chunk_tokens) == 1 else chunk_tokens[:2]
+        for word in words_to_check:
+            if word not in processed_words:  # Skip if already processed as a verb
+                match = _find_best_match(word, COOKING_METHODS)
+                if match:
+                    methods.add(match)
+                    processed_words.add(word)
 
     return sorted(methods)
