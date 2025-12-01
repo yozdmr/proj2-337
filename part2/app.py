@@ -122,6 +122,9 @@ def ask_question():
         # TODO: Provide chat history as context?
     #  for message in chat.get_history() ...
     prompt = f"Instructions:{LLM_CONTEXT}\nRecipe: {recipe}\nUser Question: {question}"
+
+    if data.get("nohtml"):
+        prompt += "\n\nDo not include any HTML tags in your response."
     
     # Send message using the chat session
     response = chat.send_message(prompt)
