@@ -4,14 +4,13 @@ import os
 from google import genai
 from dotenv import load_dotenv
 
-from chat.preprocess_question import extract_step_number, extract_clarification_subject, classify_question
+from chat.preprocess_question import extract_step_number
 from chat.frame_response.frame_ingredient_substitution import return_ingredient_substitution_response
-from chat.frame_response.frame_ingredient_quantity import get_ingredient_quantity_response
 
 from process_recipe.recipe import Recipe
 
 from chat.conversation_history import ConversationHistory
-from chat.llm_context import LLM_CONTEXT
+from chat.llm_context import LLM_CONTEXT, QUESTION_CLASSIFICATION_PROMPT
 
 # Load environment variables
 load_dotenv()
@@ -23,6 +22,7 @@ if not api_key:
 
 client = genai.Client()
 chat = client.chats.create(model="gemini-2.5-flash")
+classification_chat = client.chats.create(model="gemini-2.5-flash-lite")
 
 conversation = ConversationHistory()
 
@@ -36,9 +36,50 @@ def reset_conversation_state():
     global previous_question
     global previous_answer
     global chat
+    global classification_chat
     previous_question = None
     previous_answer = None
     chat = client.chats.create(model="gemini-2.5-flash")
+    classification_chat = client.chats.create(model="gemini-2.5-flash")
+
+
+def classify_question_with_llm(question: str) -> str:
+    global classification_chat
+    
+    # Build the classification prompt
+    prompt = f"{QUESTION_CLASSIFICATION_PROMPT}\n\nUser Question: {question}\n\nCategory:"
+    
+    try:
+        # Send message to the classification chat
+        response = classification_chat.send_message(prompt)
+        category = response.text.strip().lower()
+        
+        # Validate that the category is one of the expected values
+        valid_categories = [
+            "recipe", "next_step", "previous_step", "current_step", "first_step", "nth_step",
+            "all_ingredients", "step_ingredients", "how_much_ingredient", "replacement_ingredient",
+            "time", "temperature", "step_tools", "all_tools", "step_methods", "all_methods",
+            "clarification_specific", "vague_item", "vague_quantity", "vague_method",
+            "yes", "no", "repeat", "thanks", "none"
+        ]
+        
+        # Check if the response is a valid category
+        if category in valid_categories:
+            return category
+        else:
+            # If the LLM returned something unexpected, try to extract a valid category
+            # Sometimes LLMs add extra text, so check if any valid category is in the response
+            for valid_cat in valid_categories:
+                if valid_cat in category:
+                    return valid_cat
+            
+            # If still no match, return "none" as fallback
+            print(f"Warning: LLM returned unexpected category '{category}', defaulting to 'none'")
+            return "none"
+            
+    except Exception as e:
+        print(f"Error classifying question with LLM: {e}")
+        return "none"
 
 
 def _format_recipe_context(recipe: Recipe) -> str:
@@ -126,12 +167,11 @@ def _format_recipe_context(recipe: Recipe) -> str:
     return "\n".join(context_parts)
 
 
-def _get_current_step_context(recipe: Recipe) -> str:
-    if recipe is None or recipe.current_step is None:
+def _format_step_context(step) -> str:
+    if step is None:
         return ""
     
-    step = recipe.current_step
-    context_parts = [f"\nCurrent Step: {step.step_number}"]
+    context_parts = [f"Step Number: {step.step_number}"]
     context_parts.append(f"Description: {step.description}")
     
     if step.ingredients:
@@ -166,7 +206,14 @@ def _get_current_step_context(recipe: Recipe) -> str:
     return "\n".join(context_parts)
 
 
-def _call_llm(question: str, recipe: Recipe, question_type: str = None, additional_context: str = "", recipe_context_text: str = None) -> str:
+def _get_current_step_context(recipe: Recipe) -> str:
+    if recipe is None or recipe.current_step is None:
+        return ""
+    
+    return _format_step_context(recipe.current_step)
+
+
+def _call_llm(question: str, recipe: Recipe, question_type: str = None, additional_context: str = "", recipe_context_text: str = None, specific_step = None) -> str:
     global chat
     
     # Format recipe context
@@ -178,12 +225,24 @@ def _call_llm(question: str, recipe: Recipe, question_type: str = None, addition
     # Build prompt
     prompt_parts = [f"Instructions:{LLM_CONTEXT}"]
     
+    if question_type in ["vague_item", "vague_method", "clarification_specific"] and question_type != "yes":
+        prompt_parts.append(f"\nMake sure you tell the user that \"\nLinks for additional information are available in the suggestions section.\"")
+
     if question_type:
         prompt_parts.append(f"\nQuestion Type: {question_type}")
     
+    # For step-related questions, emphasize using ONLY the specified step
+    if question_type in ["next_step", "previous_step", "current_step", "first_step", "nth_step"]:
+        if specific_step:
+            step_context = _format_step_context(specific_step)
+            prompt_parts.append(f"\n=== IMPORTANT: ANSWER ONLY ABOUT THIS SPECIFIC STEP ===\n{step_context}\n=== DO NOT COMBINE OR MENTION OTHER STEPS ===\n")
+        elif current_step_context:
+            prompt_parts.append(f"\n=== IMPORTANT: ANSWER ONLY ABOUT THE CURRENT STEP BELOW ===\n{current_step_context}\n=== DO NOT COMBINE OR MENTION OTHER STEPS ===\n")
+    
     prompt_parts.append(f"\nRecipe:\n{recipe_context}")
     
-    if current_step_context:
+    # Only add current step context if not already added above for step questions
+    if current_step_context and question_type not in ["next_step", "previous_step", "current_step", "first_step", "nth_step"]:
         prompt_parts.append(current_step_context)
     
     # Add recipe context text as secondary source of information
@@ -213,13 +272,11 @@ _INGREDIENT_STOPWORDS = {
 
 
 def _normalize_text_for_match(text: str) -> str:
-    """Lowercase, keep only letters and spaces, collapse whitespace."""
     text = re.sub(r"[^a-zA-Z\\s]", " ", text.lower())
     return " ".join(text.split())
 
 
 def _get_ingredient_list(recipe):
-    """Get the list of ingredient dicts from the Recipe object or dict."""
     if recipe is None:
         return []
     # recipe class
@@ -244,7 +301,6 @@ def _get_ingredient_list(recipe):
 
 
 def _best_match_ingredient_from_question(question: str, recipe):
-    """Heuristically find the ingredient mentioned in the question."""
     ingredients = _get_ingredient_list(recipe)
     if not ingredients:
         return None
@@ -304,7 +360,7 @@ def handle_question(question: str, recipe: Recipe, recipe_context_text: str = No
     conversation.print_history()
 
     
-    question_type = classify_question(question)
+    question_type = classify_question_with_llm(question)
     print("\t", question_type)
 
     if question_type in ["recipe"]:
@@ -327,8 +383,9 @@ def handle_question(question: str, recipe: Recipe, recipe_context_text: str = No
         stepped = True
 
         if question_type == "first_step":
-            # Avoid updating recipe.first_step so that it remains the same 
+            # Update current_step to first_step for consistency
             subject_step = recipe.first_step
+            recipe.current_step = recipe.first_step
         else:
             if question_type == "next_step":
                 subject_step, stepped = recipe.step_forward()
@@ -336,6 +393,7 @@ def handle_question(question: str, recipe: Recipe, recipe_context_text: str = No
                 subject_step, stepped = recipe.step_backward()
             elif question_type == "current_step":
                 subject_step = recipe.current_step
+                stepped = False
             elif question_type == "nth_step":
                 step_number = extract_step_number(question)
                 temp_step = recipe.nth_step(step_number)
@@ -344,7 +402,7 @@ def handle_question(question: str, recipe: Recipe, recipe_context_text: str = No
                 subject_step = recipe.current_step
 
         # Call LLM to generate response about the step
-        answer = _call_llm(question, recipe, question_type, recipe_context_text=recipe_context_text)
+        answer = _call_llm(question, recipe, question_type, recipe_context_text=recipe_context_text, specific_step=subject_step)
         
         # NOTE: If this is true, set previous question, because the bot's response
         #   asks yes/no question at the end
@@ -366,10 +424,14 @@ def handle_question(question: str, recipe: Recipe, recipe_context_text: str = No
             conversation.add_step(question, question_type, previous_answer, recipe.current_step)
             return previous_answer
         else:
+            # Handle cases where we didn't step (either at boundaries or for current_step)
             if question_type == "next_step":
                 return "Congratulations! You've completed the recipe."
             elif question_type == "previous_step":
                 return "You're at the beginning of the recipe. Onwards!"
+            elif question_type == "current_step":
+                conversation.add_step(question, question_type, previous_answer, recipe.current_step)
+                return previous_answer
 
 
     elif question_type in ["step_methods", "all_methods"]:

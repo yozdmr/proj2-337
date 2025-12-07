@@ -56,69 +56,6 @@ def extract_step_number(question: str) -> int:
     return 1
 
 
-def extract_clarification_subject(question: str, ingredients: list[dict], tools: list[dict]) -> str:
-    question_lower = question.lower().strip()
-    
-    # Patterns for "how do I" questions (methods)
-    how_do_i_patterns = [
-        r"^how\s+do\s+i\s+",
-        r"^how\s+do\s+you\s+",
-        r"^how\s+to\s+",
-        r"^how\s+can\s+i\s+",
-        r"^how\s+should\s+i\s+",
-    ]
-    
-    # Patterns for "what is" questions (ingredients or tools)
-    what_is_patterns = [
-        r"^what\s+is\s+a\s+",
-        r"^what\s+is\s+an\s+",
-        r"^what\s+is\s+",
-        r"^what's\s+a\s+",
-        r"^what's\s+an\s+",
-        r"^what's\s+",
-        r"^what\s+are\s+",
-    ]
-    
-    # Try to match "how do I" patterns first (methods)
-    for pattern in how_do_i_patterns:
-        match = re.match(pattern, question_lower)
-        if match:
-            # Extract subject after the prefix
-            subject = question_lower[match.end():].strip()
-            # Remove trailing question mark if present
-            subject = subject.rstrip("?")
-            # Return the extracted subject (methods matching happens elsewhere)
-            return subject.strip(), "verb"
-    
-    # Try to match "what is" patterns (ingredients or tools)
-    for pattern in what_is_patterns:
-        match = re.match(pattern, question_lower)
-        if match:
-            # Extract subject after the prefix
-            subject = question_lower[match.end():].strip()
-            # Remove trailing question mark if present
-            subject = subject.rstrip("?")
-            subject = subject.strip()
-            
-            # Try to match against ingredients
-            for ingredient in ingredients:
-                ingredient_name = ingredient.get("name", "").lower() if isinstance(ingredient, dict) else str(ingredient).lower()
-                if ingredient_name and subject == ingredient_name:
-                    return subject, "noun"
-            
-            # Try to match against tools
-            for tool in tools:
-                tool_name = tool.get("name", "").lower() if isinstance(tool, dict) else str(tool).lower()
-                if tool_name and subject == tool_name:
-                    return subject, "noun"
-            
-            # If no exact match, return the extracted subject anyway
-            return subject, None
-    
-    # If no pattern matched, return the original question (or empty string)
-    return None, None
-
-
 def classify_question(question: str) -> str:
     # Normalize question: lowercase, remove punctuation, normalize whitespace
     if "method" in question.lower() or "methods" in question.lower() or "technique" in question.lower():
